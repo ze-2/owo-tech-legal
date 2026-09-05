@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Clearclaim SCT assessment helper",
-  "version": "0.2.0",
-  "description": "Preview and apply reviewed Clearclaim data to the CJTS SCT pre-filing assessment.",
+  "version": "0.3.0",
+  "description": "Fill reviewed CJTS fields and follow the SCT assessment as new questions appear.",
   "permissions": ["activeTab", "scripting"],
   "action": {
     "default_popup": "popup.html",

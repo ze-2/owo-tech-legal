@@ -65,6 +65,22 @@ export function optionId(groupId, label) {
   return index < 0 ? "" : `${groupId}:${index}`;
 }
 
+export function validSctOption(groupId, label) {
+  return Boolean(optionId(groupId, label));
+}
+
+/** Options a reviewer can choose for the approved broad claim category.
+ * "Other" deliberately exposes every group: it has no safe narrower mapping. */
+export function sctOptionsForClaimType(claimType) {
+  const recommendation = claimTypeRecommendation(claimType);
+  const groups = recommendation
+    ? sctGroups.filter((group) => group.id === recommendation.groupId)
+    : sctGroups;
+  return groups.flatMap((group) =>
+    group.options.map((label) => ({ groupId: group.id, label })),
+  );
+}
+
 export function claimTypeRecommendation(claimType) {
   return recommendations[claimType] ?? null;
 }

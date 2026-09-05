@@ -1,9 +1,12 @@
 {
   "sourcePage": "https://cjts.judiciary.gov.sg/prefiling/prefilingTerms",
   "sourceBundle": "https://cjts.judiciary.gov.sg/assets/523.aa30ecea52444606.js",
-  "inspectedOn": "2026-09-05",
-  "verification": "Compiled Angular source and live rendered SCT DOM inspected with headless Chromium.",
-  "scope": ["app-prefiling-terms", "app-sct-prefiling"],
+  "inspectedOn": "2026-09-06",
+  "verification": "Public bundle and rendered SCT DOM re-inspected with Chromium; progressive helper exercised with fictional values, stopping before Submit.",
+  "scope": [
+    "app-prefiling-terms",
+    "app-sct-prefiling"
+  ],
   "fields": [
     {
       "source": "amount",
@@ -13,7 +16,7 @@
     {
       "source": "incidentDate",
       "target": "input[name=\"d2\"][ngbdatepicker]",
-      "action": "manual: CJTS exposes a read-only date picker"
+      "action": "select exact year, month and day via visible ngb-datepicker controls; verify DD/MM/YYYY result"
     },
     {
       "source": "claimType",
@@ -28,7 +31,7 @@
     "claimType": "Nature of Dispute group/option recommendation",
     "summary": null,
     "outcome": null,
-    "incidentDate": "Date of Cause of Action (manual date-picker selection)",
+    "incidentDate": "Date of Cause of Action via native date picker",
     "timeline": null,
     "caseNumber": null,
     "assessmentId": null
@@ -64,23 +67,57 @@
     {
       "id": "goods",
       "label": "CONTRACT FOR SALE OF GOODS",
-      "options": ["Defective Goods", "Non-Delivery", "Goods Not As Contracted", "Non-Payment", "Cancellation/Opt Out", "Refund (motor vehicle deposit)", "Unfair Practice in relation to Hire Purchase Agreements", "Others"]
+      "options": [
+        "Defective Goods",
+        "Non-Delivery",
+        "Goods Not As Contracted",
+        "Non-Payment",
+        "Cancellation/Opt Out",
+        "Refund (motor vehicle deposit)",
+        "Unfair Practice in relation to Hire Purchase Agreements",
+        "Others"
+      ]
     },
     {
       "id": "services",
       "label": "CONTRACT FOR PROVISION OF SERVICES",
-      "options": ["Unsatisfactory Services", "Incomplete Services", "Renovation Services", "No Services Rendered", "Non-Payment", "Others"]
+      "options": [
+        "Unsatisfactory Services",
+        "Incomplete Services",
+        "Renovation Services",
+        "No Services Rendered",
+        "Non-Payment",
+        "Others"
+      ]
     },
     {
       "id": "property",
       "label": "DAMAGE TO PROPERTY",
-      "options": ["Owner of Property", "Damage not arising from motor vehicle accident", "Others"]
+      "options": [
+        "Owner of Property",
+        "Damage not arising from motor vehicle accident",
+        "Others"
+      ]
     },
     {
       "id": "residential",
       "label": "LEASE NOT EXCEEDING 2 YEARS (RESIDENTIAL PREMISES)",
-      "options": ["Breach of Tenant's Obligation", "Breach of Landlord's Obligation", "Refund of Rental Deposit", "Rental Arrears", "Others"]
+      "options": [
+        "Breach of Tenant's Obligation",
+        "Breach of Landlord's Obligation",
+        "Refund of Rental Deposit",
+        "Rental Arrears",
+        "Others"
+      ]
     }
   ],
-  "conditionalActions": "Success, warning and error dialogs contain OK and close controls. These are not automated."
+  "conditionalActions": "Discover group-specific Others descriptions and current consent/questionnaire Yes/No controls after each change. User supplies each missing value or answer. Do not click Submit or modal confirmation buttons.",
+  "progressiveFields": [
+    "salesOthersDesc",
+    "serviceOthersDesc",
+    "damagedOthersDesc",
+    "rentalOthersDesc",
+    "claimAmountConsent",
+    "questions1Row"
+  ]
 }

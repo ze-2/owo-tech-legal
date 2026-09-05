@@ -10,7 +10,7 @@ import {
   uncertainDates,
 } from "../src/lib/review";
 import { finishConversation, localConversation } from "../src/lib/conversation";
-import { parsePackage } from "../extension/shared/transfer.mjs";
+import { parsePackage } from "../cjts-prefiling/transfer.mjs";
 import { speechError } from "../src/lib/speech";
 import { POST } from "../src/app/api/conversation/route";
 const draft = organiseLocally({
@@ -87,28 +87,29 @@ test("unsupported assertions and contradictory records produce evidence-linked i
 test("only approved current values are exported, with no private context", () => {
   const reviews = initialReviews(draft, "ai-organised");
   reviews.claimant!.review = "approved";
-  const pack = approvedPackage(draft, reviews);
+  const pack = approvedPackage(draft, reviews, [{ groupId: "goods", label: "Defective Goods" }]);
   assert.deepEqual(Object.keys(pack.fields), ["claimant"]);
   assert.equal(pack.userReviewed, true);
   assert.equal(pack.fields.claimant.provenance, "ai-organised");
   assert.ok(!JSON.stringify(pack).includes("February"));
   assert.throws(
-    () => approvedPackage({ ...draft, claimant: "Changed" }, reviews),
+    () => approvedPackage({ ...draft, claimant: "Changed" }, reviews, [{ groupId: "goods", label: "Defective Goods" }]),
     /No approved/,
   );
   assert.throws(
-    () => approvedPackage(draft, initialReviews(draft, "user")),
+    () => approvedPackage(draft, initialReviews(draft, "user"), [{ groupId: "goods", label: "Defective Goods" }]),
     /No approved/,
   );
 });
 test("malformed, unapproved, oversized and unsupported-version packages are rejected", () => {
   const valid = {
-    version: 1,
+    version: 2,
     generatedAt: new Date().toISOString(),
     userReviewed: true,
     fields: {
       claimant: { value: "Mei", review: "approved", provenance: "user" },
     },
+    assessment: { sctOptions: [{ groupId: "goods", label: "Defective Goods" }] },
   };
   assert.equal(
     parsePackage(JSON.stringify(valid)).fields.claimant.value,
@@ -118,7 +119,7 @@ test("malformed, unapproved, oversized and unsupported-version packages are reje
     "{",
     "x".repeat(350001),
     null,
-    { ...valid, version: 2 },
+    { ...valid, version: 1 },
     { ...valid, userReviewed: false },
     { ...valid, evidence: ["private"] },
     {

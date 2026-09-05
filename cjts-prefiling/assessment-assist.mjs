@@ -1,5 +1,5 @@
 /** Self-contained for chrome.scripting.executeScript's isolated world. */
-export function assistAssessment(action, supportedGroups, payload = {}) {
+export async function assistAssessment(action, supportedGroups, payload = {}) {
   const isOfficial =
     location.origin === "https://cjts.judiciary.gov.sg" &&
     location.pathname === "/prefiling/prefilingAssessment";
@@ -103,6 +103,16 @@ export function assistAssessment(action, supportedGroups, payload = {}) {
       results.push({ id, applied: false, reason: "Option is unavailable" });
       continue;
     }
+    // CJTS keeps each group's options (and its Others input) under a hidden
+    // dropdown. Open it using the portal's own toggle before applying a choice.
+    if (checkbox.closest('[hidden]') || !checkbox.getClientRects().length) {
+      groupContainer.querySelector('.selectBox')?.click();
+      await new Promise((resolve) => setTimeout(resolve, 80));
+    }
+    if (!checkbox.isConnected || checkbox.disabled) {
+      results.push({ id, applied: false, reason: "Option changed; scan again" });
+      continue;
+    }
     if (!checkbox.checked) checkbox.click();
     results.push({
       id,
@@ -111,58 +121,5 @@ export function assistAssessment(action, supportedGroups, payload = {}) {
     });
   }
 
-  // Defence in depth, matching form-assist.mjs: the popup only ever forwards
-  // parsePackage output, but the injected script re-checks approval itself
-  // rather than trusting a bare value handed across the boundary.
-  const approvedValue = (field) =>
-    field &&
-    typeof field === "object" &&
-    field.review === "approved" &&
-    typeof field.value === "string" &&
-    field.value.trim()
-      ? field.value
-      : "";
-
-  let amount = null;
-  const amountValue = approvedValue(payload.amount);
-  if (amountValue) {
-    const controls = [...root.querySelectorAll('input#cAmount[name="cAmount"]')];
-    const control = controls.length === 1 ? controls[0] : null;
-    if (!control)
-      amount = {
-        filled: false,
-        reason: "Select a dispute option to reveal Claim Amount",
-      };
-    else if (control.disabled || control.readOnly)
-      amount = { filled: false, reason: "Claim Amount is unavailable" };
-    else if (control.value.trim())
-      amount = {
-        filled: false,
-        reason: "Claim Amount already contains a value",
-      };
-    else {
-      const setter = Object.getOwnPropertyDescriptor(
-        HTMLInputElement.prototype,
-        "value",
-      )?.set;
-      setter?.call(control, amountValue);
-      control.dispatchEvent(new Event("input", { bubbles: true }));
-      control.dispatchEvent(new Event("change", { bubbles: true }));
-      control.dispatchEvent(new Event("blur", { bubbles: true }));
-      const displayedAmount = control.value.replace(/,/g, "");
-      amount =
-        displayedAmount && Number(displayedAmount) === Number(amountValue)
-          ? { filled: true, reason: "", displayedValue: control.value }
-          : { filled: false, reason: "The portal rejected Claim Amount" };
-    }
-  }
-  const dateControl = root.querySelector('input[name="d2"][ngbdatepicker]');
-  const incidentDate =
-    approvedValue(payload.incidentDate) && dateControl
-      ? {
-          filled: false,
-          reason: "Use the CJTS date picker; direct entry is read-only",
-        }
-      : null;
-  return { options: results, amount, incidentDate };
+  return { options: results };
 }

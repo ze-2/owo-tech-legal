@@ -1,15 +1,8 @@
-/**
- * Shared wire contract. No case narrative, evidence, or research outside
- * approved fields.
- *
- * MIRRORED FILE — this exact content also lives at `cjts-prefiling/transfer.mjs`.
- * Each unpacked extension is loaded independently under its own
- * `chrome-extension://` origin and cannot import across folders, and there is no
- * build step, so the contract is duplicated on disk by necessity. The copies
- * previously drifted (a version-2 package reported two different errors), so
- * `tests/transfer-parity.test.ts` fails if they stop being byte-identical.
- * Edit one, copy it to the other.
- */
+/** Single transfer contract shared by the webpage and unpacked CJTS helper. */
+import { validSctOption } from "./claim-type.mjs";
+// Accommodates all ten fields at their character limit, including escaped Unicode.
+export const MAX_PACKAGE_BYTES = 2_000_000;
+
 export const filingFields = Object.freeze({
   claimant: "Claimant particulars",
   respondent: "Respondent particulars",
@@ -51,7 +44,10 @@ export function validField(key, value) {
   return true;
 }
 export function parsePackage(input) {
-  if (typeof input === "string" && input.length > 350000)
+  if (
+    typeof input === "string" &&
+    new TextEncoder().encode(input).byteLength > MAX_PACKAGE_BYTES
+  )
     throw new Error("Package is too large.");
   let data;
   try {
@@ -59,11 +55,18 @@ export function parsePackage(input) {
   } catch {
     throw new Error("Choose a valid Clearclaim JSON package.");
   }
-  if (!data || data.version !== 1)
-    throw new Error("Unsupported transfer version. Expected version 1.");
+  if (!data || data.version !== 2)
+    throw new Error("Unsupported transfer version. Expected version 2.");
   if (
     Object.keys(data).some(
-      (k) => !["version", "generatedAt", "userReviewed", "fields"].includes(k),
+      (k) =>
+        ![
+          "version",
+          "generatedAt",
+          "userReviewed",
+          "fields",
+          "assessment",
+        ].includes(k),
     ) ||
     data.userReviewed !== true ||
     typeof data.generatedAt !== "string" ||
@@ -71,7 +74,14 @@ export function parsePackage(input) {
     new Date(data.generatedAt).toISOString() !== data.generatedAt ||
     !data.fields ||
     typeof data.fields !== "object" ||
-    Array.isArray(data.fields)
+    Array.isArray(data.fields) ||
+    !data.assessment ||
+    typeof data.assessment !== "object" ||
+    Array.isArray(data.assessment) ||
+    Object.keys(data.assessment).some((key) => key !== "sctOptions") ||
+    !Array.isArray(data.assessment.sctOptions) ||
+    !data.assessment.sctOptions.length ||
+    data.assessment.sctOptions.length > 22
   )
     throw new Error("Malformed reviewed filing package.");
   const entries = Object.entries(data.fields);
@@ -95,6 +105,23 @@ export function parsePackage(input) {
       !validField(key, field.value)
     )
       throw new Error(`Invalid or unapproved field: ${key}`);
+  }
+  const seenOptions = new Set();
+  for (const option of data.assessment.sctOptions) {
+    if (
+      !option ||
+      typeof option !== "object" ||
+      Array.isArray(option) ||
+      Object.keys(option).some((key) => !["groupId", "label"].includes(key)) ||
+      typeof option.groupId !== "string" ||
+      typeof option.label !== "string" ||
+      !validSctOption(option.groupId, option.label)
+    )
+      throw new Error("Invalid reviewed SCT dispute subtype.");
+    const id = `${option.groupId}:${option.label}`;
+    if (seenOptions.has(id))
+      throw new Error("Duplicate reviewed SCT dispute subtype.");
+    seenOptions.add(id);
   }
   return data;
 }

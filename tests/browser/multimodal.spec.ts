@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { assistForm } from "../../extension/form-assist.mjs";
-import { parsePackage } from "../../extension/shared/transfer.mjs";
+import { assistForm } from "../../cjts-prefiling/form-assist.mjs";
+import { parsePackage } from "../../cjts-prefiling/transfer.mjs";
 
 test("conversation → challenge → field approval → export → assisted mock form transfer", async ({
   page,

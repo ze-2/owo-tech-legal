@@ -3,7 +3,7 @@ import {
   filingFields,
   parsePackage,
   validField,
-} from "../../extension/shared/transfer.mjs";
+} from "../../cjts-prefiling/transfer.mjs";
 
 export type FilingField = keyof typeof filingFields;
 export type Provenance =
@@ -15,6 +15,7 @@ export type FieldReview = {
   value: string;
 };
 export type Reviews = Partial<Record<FilingField, FieldReview>>;
+export type SctOption = { groupId: string; label: string };
 export type Statement = {
   id: string;
   text: string;
@@ -97,7 +98,11 @@ export function initialReviews(draft: Draft, provenance: Provenance): Reviews {
   });
   return Object.fromEntries(entries);
 }
-export function approvedPackage(draft: Draft, reviews: Reviews) {
+export function approvedPackage(
+  draft: Draft,
+  reviews: Reviews,
+  sctOptions: SctOption[],
+) {
   const approvedEntries = Object.entries(reviews)
     .filter(([key, meta]) => {
       if (meta?.review !== "approved") return false;
@@ -107,10 +112,11 @@ export function approvedPackage(draft: Draft, reviews: Reviews) {
     .map(([key, meta]) => [key, meta]);
   const fields = Object.fromEntries(approvedEntries);
   return parsePackage({
-    version: 1,
+    version: 2,
     generatedAt: new Date().toISOString(),
     userReviewed: true,
     fields,
+    assessment: { sctOptions },
   });
 }
 

@@ -6,8 +6,10 @@ import {
   type Assertion,
   type FilingField,
   type Reviews,
+  type SctOption,
 } from "@/lib/review";
-import { filingFields, validField } from "../../extension/shared/transfer.mjs";
+import { filingFields, validField } from "../../cjts-prefiling/transfer.mjs";
+import { sctGroups, sctOptionsForClaimType } from "../../cjts-prefiling/claim-type.mjs";
 
 type ClaimReviewProps = {
   draft: Draft;
@@ -17,6 +19,8 @@ type ClaimReviewProps = {
   onAssertions: (items: Assertion[]) => void;
   reviews: Reviews;
   onReview: (key: FilingField, approved: boolean) => void;
+  sctOptions: SctOption[];
+  onSctOptions: (items: SctOption[]) => void;
   onEdit: () => void;
   onExport: () => void;
 };
@@ -29,6 +33,8 @@ export function ClaimReview({
   onAssertions,
   reviews,
   onReview,
+  sctOptions,
+  onSctOptions,
   onEdit,
   onExport,
 }: ClaimReviewProps) {
@@ -39,6 +45,24 @@ export function ClaimReview({
     (key) =>
       reviews[key]?.review === "approved" && reviews[key]?.value === draft[key],
   );
+  const availableSctOptions = sctOptionsForClaimType(draft.claimType);
+  const availableIds = new Set(
+    availableSctOptions.map((option) => `${option.groupId}:${option.label}`),
+  );
+  const selectedSctOptions = sctOptions.filter((option) =>
+    availableIds.has(`${option.groupId}:${option.label}`),
+  );
+
+  function setSctOption(option: SctOption, checked: boolean) {
+    const id = `${option.groupId}:${option.label}`;
+    onSctOptions(
+      checked
+        ? [...selectedSctOptions, option]
+        : selectedSctOptions.filter(
+            (item) => `${item.groupId}:${item.label}` !== id,
+          ),
+    );
+  }
 
   function setEvidenceLink(
     assertionId: string,
@@ -146,10 +170,53 @@ export function ClaimReview({
           {approvedKeys.length} approved fields. Edits to your account or
           evidence require renewed approval.
         </p>
+        <div className="approval-field">
+          <h3>CJTS dispute subtype(s)</h3>
+          <p className="review-status">
+            Choose every exact subtype that you reviewed. The extension will
+            select these choices when it opens the SCT assessment. CJTS
+            questions and any description for “Others” remain for you to
+            complete.
+          </p>
+          {sctGroups
+            .filter((group) =>
+              availableSctOptions.some((option) => option.groupId === group.id),
+            )
+            .map((group) => (
+              <fieldset key={group.id}>
+                <legend>{group.label}</legend>
+                {availableSctOptions
+                  .filter((option) => option.groupId === group.id)
+                  .map((option) => {
+                    const checked = selectedSctOptions.some(
+                      (item) =>
+                        item.groupId === option.groupId && item.label === option.label,
+                    );
+                    return (
+                      <label className="check-label" key={option.label}>
+                        <input
+                          type="checkbox"
+                          aria-label={`Approve CJTS subtype ${option.label}`}
+                          checked={checked}
+                          onChange={(event) =>
+                            setSctOption(option, event.target.checked)
+                          }
+                        />
+                        I reviewed {option.label} for CJTS transfer
+                      </label>
+                    );
+                  })}
+              </fieldset>
+            ))}
+          <p role="status">
+            {selectedSctOptions.length} reviewed SCT subtype
+            {selectedSctOptions.length === 1 ? "" : "s"} selected.
+          </p>
+        </div>
         <button
           type="button"
           className="button primary"
-          disabled={!approvedKeys.length}
+          disabled={!approvedKeys.length || !selectedSctOptions.length}
           onClick={onExport}
         >
           Export approved filing JSON

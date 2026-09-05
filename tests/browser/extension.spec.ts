@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { loadExtension } from "./extension-harness";
 
 const approvedPackage = {
-  version: 1,
+  version: 2,
   generatedAt: new Date().toISOString(),
   userReviewed: true,
   fields: {
@@ -19,6 +19,7 @@ const approvedPackage = {
       provenance: "user",
     },
   },
+  assessment: { sctOptions: [{ groupId: "services", label: "Incomplete Services" }] },
 };
 
 function packageFile(pack: unknown) {
@@ -37,26 +38,27 @@ test("unpacked extension validates imports and fails safely without page permiss
     test.info().project.name !== "desktop",
     "Chrome extension is a desktop surface",
   );
-  const { context, id } = await loadExtension("extension");
+  const { context, id } = await loadExtension("cjts-prefiling");
   try {
     const form = await context.newPage();
     await form.goto(`${baseURL}/mock-cjts.html`);
     const popup = await context.newPage();
     await popup.goto(`chrome-extension://${id}/popup.html`);
+    await popup.getByText("Claim form transfer", { exact: true }).click();
     // Opening the popup as a tab does not grant activeTab. Exercise this actual
     // permission failure boundary without adding host permissions to production.
     await popup
-      .getByLabel("Approved filing package")
+      .locator("#package")
       .setInputFiles({
         name: "bad.json",
         mimeType: "application/json",
-        buffer: Buffer.from('{"version":2}'),
+        buffer: Buffer.from('{"version":1}'),
       });
-    await expect(popup.getByRole("status")).toContainText(
+    await expect(popup.locator("#status")).toContainText(
       "Unsupported transfer version",
     );
     const pack = {
-      version: 1,
+      version: 2,
       generatedAt: new Date().toISOString(),
       userReviewed: true,
       fields: {
@@ -67,16 +69,17 @@ test("unpacked extension validates imports and fails safely without page permiss
           provenance: "user",
         },
       },
+      assessment: { sctOptions: [{ groupId: "services", label: "Incomplete Services" }] },
     };
     await popup
-      .getByLabel("Approved filing package")
+      .locator("#package")
       .setInputFiles({
         name: "approved.json",
         mimeType: "application/json",
         buffer: Buffer.from(JSON.stringify(pack)),
       });
-    await expect(popup.getByRole("status")).toContainText(
-      "2 approved fields loaded",
+    await expect(popup.locator("#status")).toContainText(
+      "Cannot access",
     );
     await expect(
       popup.getByRole("button", { name: "Preview compatible fields" }),
@@ -85,7 +88,7 @@ test("unpacked extension validates imports and fails safely without page permiss
     await popup
       .getByRole("button", { name: "Preview compatible fields" })
       .click();
-    await expect(popup.getByRole("status")).toContainText(
+    await expect(popup.locator("#form-status")).toContainText(
       "Could not inspect this page",
     );
     await expect(
@@ -95,64 +98,44 @@ test("unpacked extension validates imports and fails safely without page permiss
     await expect(form.locator("#submission-status")).toHaveText(
       "Nothing submitted.",
     );
-    await popup.getByRole("button", { name: "Clear package" }).click();
-    await expect(popup.getByRole("status")).toHaveText("Package cleared.");
+    await popup.getByRole("button", { name: "Clear" }).click();
+    await expect(popup.locator("#status")).toHaveText("Cleared. Open the SCT assessment, then scan.");
   } finally {
     await context.close();
   }
 });
 
-test("the loaded popup previews, honours deselection, fills, and never submits", async ({
+test("import alone fills every compatible approved field and never submits", async ({
   baseURL,
 }) => {
   test.skip(
     test.info().project.name !== "desktop",
     "Chrome extension is a desktop surface",
   );
-  const { context, id } = await loadExtension("extension", true);
+  const { context, id } = await loadExtension("cjts-prefiling", true);
   try {
     const form = await context.newPage();
     await form.goto(`${baseURL}/mock-cjts.html`);
     const popup = await context.newPage();
     await popup.goto(`chrome-extension://${id}/popup.html`);
+    await popup.getByText("Claim form transfer", { exact: true }).click();
     // The popup asks for the active tab, so the form must be the active one —
     // exactly the arrangement a real toolbar-invoked popup sees.
     await form.bringToFront();
 
     await popup
-      .getByLabel("Approved filing package")
+      .locator("#package")
       .setInputFiles(packageFile(approvedPackage));
-    await expect(popup.getByRole("status")).toContainText(
-      "4 approved fields loaded",
+    await expect(popup.locator("#status")).toContainText(
+      "4 approved claim-form fields filled",
     );
-
-    await popup
-      .getByRole("button", { name: "Preview compatible fields" })
-      .dispatchEvent("click");
-    await expect(popup.getByRole("status")).toContainText("compatible fields");
-    const fillButton = popup.getByRole("button", {
-      name: "Fill selected fields",
-    });
-    await expect(fillButton).toBeEnabled();
-
-    // Deselect one approved field: the user's choice must be respected.
-    const respondentRow = popup
-      .locator("#fields label")
-      .filter({ hasText: "Respondent particulars" })
-      .locator("input[type=checkbox]");
-    await expect(respondentRow).toBeChecked();
-    await respondentRow.uncheck({ force: true });
-
-    await fillButton.dispatchEvent("click");
-    await expect(popup.getByRole("status")).toContainText("fields filled");
 
     await expect(form.getByLabel("Claimant particulars")).toHaveValue("Mei Lim");
     await expect(form.getByLabel("Claim amount (SGD)")).toHaveValue("2400");
     await expect(form.getByLabel("Description of claim")).toHaveValue(
       "Kitchen renovation was left unfinished.",
     );
-    // Deselected, so it must remain untouched even though it was approved.
-    await expect(form.getByLabel("Respondent particulars")).toHaveValue("");
+    await expect(form.getByLabel("Respondent particulars")).toHaveValue("Example Renovation");
 
     // The load-bearing guarantee: assisted transfer never submits.
     expect(await form.evaluate(
@@ -173,17 +156,20 @@ test("a stale preview signature refuses to fill after the page changes", async (
     test.info().project.name !== "desktop",
     "Chrome extension is a desktop surface",
   );
-  const { context, id } = await loadExtension("extension", true);
+  const { context, id } = await loadExtension("cjts-prefiling", true);
   try {
     const form = await context.newPage();
     await form.goto(`${baseURL}/mock-cjts.html`);
     const popup = await context.newPage();
     await popup.goto(`chrome-extension://${id}/popup.html`);
+    await popup.getByText("Claim form transfer", { exact: true }).click();
     await form.bringToFront();
 
     await popup
-      .getByLabel("Approved filing package")
+      .locator("#package")
       .setInputFiles(packageFile(approvedPackage));
+    await expect(form.getByLabel("Claimant particulars")).toHaveValue("Mei Lim");
+    await form.getByLabel("Claimant particulars").fill("");
     await popup
       .getByRole("button", { name: "Preview compatible fields" })
       .dispatchEvent("click");
@@ -202,7 +188,7 @@ test("a stale preview signature refuses to fill after the page changes", async (
     await popup
       .getByRole("button", { name: "Fill selected fields" })
       .dispatchEvent("click");
-    await expect(popup.getByRole("status")).toContainText("filled");
+    await expect(popup.locator("#form-status")).toContainText("filled");
     await expect(form.locator("#claimant-renamed")).toHaveValue("");
     expect(await form.evaluate(
       () => (window as unknown as { submissionCount: number }).submissionCount,

@@ -71,6 +71,7 @@ import {
   type Assertion,
   type FilingField,
   type Reviews,
+  type SctOption,
   type Statement,
 } from "@/lib/review";
 import type { Observation } from "@/lib/conversation";
@@ -89,6 +90,7 @@ export function ClaimWorkspace({
   const [conversationPrompt, setConversationPrompt] = useState("");
   const [accountChanged, setAccountChanged] = useState(false);
   const [reviews, setReviews] = useState<Reviews>({});
+  const [sctOptions, setSctOptions] = useState<SctOption[]>([]);
   const previousPrompt = useRef("");
   const editedFields = useRef(new Set<keyof Draft>());
   const [assertions, setAssertions] = useState<Assertion[]>([]);
@@ -146,6 +148,7 @@ export function ClaimWorkspace({
   }
 
   function resetApprovals() {
+    setSctOptions([]);
     setReviews((current) =>
       Object.fromEntries(
         Object.entries(current).map(([key, meta]) => [
@@ -179,7 +182,7 @@ export function ClaimWorkspace({
     if (!draft) return;
     try {
       saveFile(
-        JSON.stringify(approvedPackage(draft, reviews), null, 2),
+        JSON.stringify(approvedPackage(draft, reviews, sctOptions), null, 2),
         "clearclaim-approved-filing.json",
         "application/json",
       );
@@ -469,7 +472,9 @@ export function ClaimWorkspace({
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = filename;
+    document.body.append(anchor);
     anchor.click();
+    anchor.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
@@ -1443,6 +1448,8 @@ export function ClaimWorkspace({
                     }}
                     reviews={reviews}
                     onReview={approveField}
+                    sctOptions={sctOptions}
+                    onSctOptions={setSctOptions}
                     onEdit={() => navigate(1)}
                     onExport={exportApproved}
                   />

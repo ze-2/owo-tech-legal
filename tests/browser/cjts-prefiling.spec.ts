@@ -11,15 +11,13 @@ type ScanResult = {
 };
 type ApplyResult = {
   options: Array<{ applied: boolean; reason: string }>;
-  amount: { filled: boolean };
-  incidentDate: { reason: string };
 };
 
 function callSource(action: string, payload: object = {}) {
   return `(${assistAssessment.toString()})(${JSON.stringify(action)}, ${JSON.stringify(sctGroups)}, ${JSON.stringify(payload)})`;
 }
 
-test("SCT helper scans exact options, clicks a reviewed target, and fills amount", async ({
+test("SCT helper scans exact options, clicks a reviewed target, and reveals fields", async ({
   page,
 }) => {
   await page.goto("/mock-sct.html");
@@ -60,10 +58,8 @@ test("SCT helper scans exact options, clicks a reviewed target, and fills amount
     }),
   )) as ApplyResult;
   expect(applied.options[0].applied).toBe(true);
-  expect(applied.amount.filled).toBe(true);
-  expect(applied.incidentDate.reason).toContain("date picker");
   await expect(page.locator("input#\\30")).toBeChecked();
-  await expect(page.getByLabel("Claim Amount")).toHaveValue("1500.50");
+  await expect(page.getByLabel("Claim Amount")).toHaveValue("");
 });
 
 // The SCT helper's own manifest, popup and chrome.scripting wiring previously
@@ -86,7 +82,7 @@ test("the loaded SCT popup scans, applies a reviewed option and fills the amount
     await portal.bringToFront();
 
     const pack = {
-      version: 1,
+      version: 2,
       generatedAt: new Date().toISOString(),
       userReviewed: true,
       fields: {
@@ -97,6 +93,7 @@ test("the loaded SCT popup scans, applies a reviewed option and fills the amount
         },
         amount: { value: "1500.50", review: "approved", provenance: "user" },
       },
+      assessment: { sctOptions: [{ groupId: "goods", label: "Defective Goods" }] },
     };
     await popup
       .getByLabel("Approved filing package (optional)")
@@ -105,26 +102,9 @@ test("the loaded SCT popup scans, applies a reviewed option and fills the amount
         mimeType: "application/json",
         buffer: Buffer.from(JSON.stringify(pack)),
       });
-    await expect(popup.getByRole("status")).toContainText(
-      "2 approved fields loaded",
+    await expect(popup.locator("#status")).toContainText(
+      "reviewed SCT subtype selected",
     );
-
-    await popup
-      .getByRole("button", { name: "Scan SCT options" })
-      .dispatchEvent("click");
-    await expect(popup.locator("#options fieldset")).toHaveCount(1);
-    await expect(popup.locator("#options label")).toHaveCount(8);
-
-    const target = popup
-      .locator("#options label")
-      .filter({ hasText: "Defective Goods" })
-      .locator("input[type=checkbox]");
-    await target.check({ force: true });
-
-    await popup
-      .getByRole("button", { name: "Apply selected options" })
-      .dispatchEvent("click");
-    await expect(popup.getByRole("status")).toContainText("applied");
 
     await expect(portal.locator("input#\\30")).toBeChecked();
     await expect(portal.getByLabel("Claim Amount")).toHaveValue("1500.50");
@@ -202,31 +182,4 @@ test("terms-page actions refuse to run on any other page", async ({ page }) => {
   await expect(
     page.evaluate(`(${runAction.toString()})("proceed")`),
   ).rejects.toThrow("Open the official CJTS pre-filing terms page first");
-});
-
-test("the injected script re-checks approval at its own boundary", async ({
-  page,
-}) => {
-  await page.goto("/mock-sct.html");
-  const scan = (await page.evaluate(callSource("scan"))) as ScanResult;
-  const target = scan.groups[0].options[0];
-  const base = {
-    selected: [target.id],
-    expected: { [target.id]: target.signature },
-  };
-
-  // An unapproved value must not be written even though it reached the
-  // injected script — matching the same re-check assistForm performs.
-  for (const amount of [
-    { value: "1500.50", review: "unreviewed", provenance: "user" },
-    { value: "1500.50", provenance: "user" },
-    "1500.50",
-  ]) {
-    await page.goto("/mock-sct.html");
-    const result = (await page.evaluate(
-      callSource("apply", { ...base, amount }),
-    )) as ApplyResult;
-    expect(result.amount).toBeNull();
-    await expect(page.getByLabel("Claim Amount")).toHaveValue("");
-  }
 });

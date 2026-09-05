@@ -36,7 +36,7 @@ test("only exact reviewed categories suggest a specific checkbox", () => {
 
 test("assessment helper accepts the reviewed transfer contract", () => {
   const pack = parsePackage({
-    version: 1,
+    version: 2,
     generatedAt: new Date().toISOString(),
     userReviewed: true,
     fields: {
@@ -47,6 +47,7 @@ test("assessment helper accepts the reviewed transfer contract", () => {
       },
       amount: { value: "1500.50", review: "approved", provenance: "user" },
     },
+    assessment: { sctOptions: [{ groupId: "goods", label: "Refund (motor vehicle deposit)" }] },
   });
   assert.equal(pack.fields.amount.value, "1500.50");
   assert.throws(

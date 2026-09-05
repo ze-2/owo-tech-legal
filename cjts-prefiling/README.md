@@ -1,44 +1,38 @@
-# Clearclaim SCT assessment helper
+# Clearclaim CJTS helper
 
-This is a standalone Chrome Manifest V3 extension for the current CJTS Small Claims Tribunals pre-filing flow. There is no build step or remote code.
-
-The public Angular source and live rendered DOM were inspected on 2026-09-05. The HTML shell loaded `main.85c8b8e0558a36d3.js`; its lazy pre-filing route loaded `523.aa30ecea52444606.js`, as resolved by `runtime.b6d0b24c3ef47a02.js`. The inspected portal footer reported “Last updated: 01 Sep 2026”.
+One unpacked Chrome extension for the SCT pre-filing assessment and approved claim-form transfer. No build step, remote code, or stored case data.
 
 ## Install and use
 
-1. In Chrome, open `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select this `cjts-prefiling/` directory.
-2. In Clearclaim, approve the filing fields and export the approved filing JSON.
-3. Complete the official terms/reCAPTCHA step and open the SCT Pre-Filing Assessment.
-4. Open the extension and optionally import the JSON. Choose **Scan SCT options**.
-5. Review the detected options. An exact approved category may be preselected; a broad category only outlines its matching group so you can choose the subtype.
-6. Choose **Apply selected options**, then review every change in CJTS.
+1. Open `chrome://extensions`, enable Developer mode, and load this `cjts-prefiling/` directory. Reload it after updating the code. Remove the old **Clearclaim — assisted transfer** extension if it is still installed.
+2. In the webpage’s **Prepare to file** step, approve the exact values you want to transfer and choose **Export approved filing JSON**.
+3. Open the official SCT assessment and import that JSON in the extension. Choose **Scan SCT options**.
+4. Choose the specific dispute option(s) and press **Apply selected options**. Approved amount and date values are filled as CJTS reveals them. The date is selected through the actual calendar, including year, month and day.
+5. Keep the popup open. **Continue the assessment** refreshes every second as fields and questions appear. Supply any missing amount, date or group-specific “Others” description and press **Fill these values on CJTS**. Descriptions respect CJTS’s 50-character limit.
+6. Read each newly displayed question and click its **Yes** or **No** answer. This clicks that exact question’s native CJTS button, then discovers the next branch. Answers are never inferred from a narrative or defaulted to Yes/No. Consent is a separate question and also requires your answer.
+7. At the end, review CJTS’s answers and validation messages. The helper reports when CJTS enables Submit, but never clicks it.
 
-The extension checks the exact official origin, assessment route, `TribunalType=SCT`, component, option group text, option label, and the control signature captured during the scan. It clicks only the selected SCT checkboxes. If the imported package contains an approved amount and selecting an option reveals the empty native Claim Amount input, it fills that amount. Existing values are left untouched.
+On a claim form, expand **Claim form transfer** to preview matching approved JSON fields, deselect any unwanted values, and fill them. Preview again if that form reveals additional fields. Existing values are not overwritten. The logged-in claim form’s field layout has not been verified; this semantic mapping reports unsupported or ambiguous fields rather than guessing.
 
-The CJTS cause-of-action date is a read-only `ngbdatepicker` control, so the extension reports it for manual selection. It does not infer a date-picker action, “Others” description, or later yes/no assessment answers.
+Closing the popup clears its imported package. Reopen, reimport, and scan to resume from the values already on CJTS. Clearing or replacing a package clears pending previews and local answers. The extension uses only `activeTab` and `scripting`; no persistent host access, login, CAPTCHA solving, submission, evidence upload, or payment.
 
-## Claim-category mapping
+## What is mapped
 
-| Clearclaim category | Extension behavior |
-| --- | --- |
-| Sale of goods | Highlights **CONTRACT FOR SALE OF GOODS**; user chooses subtype. |
-| Provision of services | Highlights **CONTRACT FOR PROVISION OF SERVICES**; user chooses subtype. |
-| Residential tenancy | Highlights the residential lease group; user chooses subtype. |
-| Property damage | Highlights **DAMAGE TO PROPERTY**; user chooses subtype. |
-| Motor vehicle deposit | Preselects **Refund (motor vehicle deposit)**. |
-| Unfair practice | Highlights the goods group; the portal option is narrower, so the user chooses. |
-| Other / Not sure yet | No automatic recommendation. |
+- All 22 recorded dispute options in four groups, with the existing category recommendations. Broad categories require a subtype choice.
+- `cAmount`: positive amount, with native input/change/blur events and acceptance check.
+- `d2[ngbdatepicker]`: exact approved or user-entered date through the visible native calendar.
+- `salesOthersDesc`, `serviceOthersDesc`, `damagedOthersDesc`, `rentalOthersDesc`: exact user-entered descriptions, without recycling the claim summary.
+- Conditional consent and questionnaire Yes/No controls: the current question text and branch are rechecked before applying the user’s answer.
+- Unknown visible fields and CJTS validation messages are shown for completion on the portal.
 
-The exact motor-vehicle-deposit mapping still requires the user to review and press Apply. Broad categories cannot determine facts such as non-delivery versus defective goods, landlord versus tenant obligations, whether an unfair practice concerns hire purchase, or whether property damage arose from a motor accident.
+`transfer.mjs` is the single JSON contract imported by the webpage and this extension. The former `extension/` directory and duplicated contract have been removed. `form-assist.mjs` retains the general claim-form mapping.
 
-`claim-type.mjs` contains the reviewed mapping and all 22 current portal options. `assessment-assist.mjs` performs the isolated scan/click/fill actions. `actions.json` is the machine-readable source record. `transfer.mjs` validates the local Clearclaim package before using its approved category or amount, and `assessment-assist.mjs` re-checks that each value is approved at the injected-script boundary rather than trusting what the popup passed it.
+## Verification
 
-`transfer.mjs` must stay **byte-identical** to `extension/shared/transfer.mjs`. Each extension loads under its own `chrome-extension://` origin and cannot import across folders, and there is no build step, so the contract is duplicated on disk by necessity. Edit one and copy it to the other; `tests/transfer-parity.test.ts` fails if they diverge.
+On 2026-09-06, the public HTML, assessment bundle `523.aa30ecea52444606.js`, live rendered assessment, calendar, and conditional questionnaire were inspected. The live test uses fictional values and stops at the enabled Submit button. The public assessment is accessible without logging in; this does not verify the authenticated claim-filing pages.
 
-## Verification status
+- `npm test`: transfer validation and webpage serialization tests.
+- `npm run test:e2e`: real unpacked-popup tests on local fixtures, including delayed field creation, all four Others descriptions, exact calendar selection, consent, successive questions, stale/ambiguous controls, import reset, and no submission.
+- `npm run test:cjts:live`: opt-in live public assessment tests across all four dispute groups. Requires installed Playwright Chromium and network access. Uses fictional values and Yes for the fictional consent question, No for later questions solely to exercise those branches. Never submits. Different answers can follow different branches.
 
-`tests/browser/cjts-prefiling.spec.ts` loads this extension unpacked and drives the real popup through scan and apply against `/mock-sct.html`, and covers `run-action.mjs` against `/mock-terms.html`. Those fixtures encode the control shapes recorded in `actions.json` on 2026-09-05.
-
-**The live CJTS selectors have not been re-confirmed since that date.** A passing suite does not mean the portal still matches. Before relying on this helper for real filing, re-check each assumption — the exact route, `sessionStorage.TribunalType`, the `app-sct-prefiling` and `app-prefiling-terms` component names, `.form-group`/`.selectBox` nesting, option label text, `input#cAmount[name="cAmount"]`, `input[name="d2"][ngbdatepicker]`, and the three terms-page selectors — against the rendered portal using fictional data.
-
-The terms page itself has no editable fields. Its available actions remain under **Terms-page actions** in the popup: Terms of Use, Cancel, and Proceed. Proceed uses the portal’s own reCAPTCHA verification. The helper does not solve CAPTCHA, log in, submit the assessment, file a claim, upload evidence, or make payments.
+Local fixtures model recorded DOM shapes and deliberate delays; they are not copies of the portal. A live test covers its scripted branches, not every possible path or future portal changes.

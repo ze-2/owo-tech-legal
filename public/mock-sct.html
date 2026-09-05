@@ -1,29 +1,80 @@
 <!doctype html>
-<html lang="en">
-  <head><meta charset="utf-8"><title>Mock SCT assessment</title></head>
-  <body>
-    <app-sct-prefiling>
-      <form>
-        <div class="form-group">
-          <div class="selectBox"><select aria-label="Group"><option>CONTRACT FOR SALE OF GOODS</option></select></div>
-          <label><input type="checkbox" id="0"> Defective Goods</label>
-          <label><input type="checkbox" id="1"> Non-Delivery</label>
-          <label><input type="checkbox" id="2"> Goods Not As Contracted</label>
-          <label><input type="checkbox" id="3"> Non-Payment</label>
-          <label><input type="checkbox" id="4"> Cancellation/Opt Out</label>
-          <label><input type="checkbox" id="5"> Refund (motor vehicle deposit)</label>
-          <label><input type="checkbox" id="6"> Unfair Practice in relation to Hire Purchase Agreements</label>
-          <label><input type="checkbox" id="7"> Others</label>
-        </div>
-        <div id="revealed"></div>
-      </form>
-    </app-sct-prefiling>
-    <script>
-      document.querySelector('input[type="checkbox"]').addEventListener('change', (event) => {
-        document.querySelector('#revealed').innerHTML = event.target.checked
-          ? '<input readonly name="d2" ngbdatepicker placeholder="dd/mm/yyyy"><input id="cAmount" name="cAmount" aria-label="Claim Amount">'
-          : '';
-      });
-    </script>
-  </body>
-</html>
+<html lang="en"><head><meta charset="utf-8"><title>Mock SCT assessment</title></head>
+<body><app-sct-prefiling><form><div class="form-group" data-group="goods"><div class="selectBox"><select aria-label="goods group"><option>CONTRACT FOR SALE OF GOODS</option></select></div><label><input type="checkbox" id="0" name="typeOfDispute0"> Defective Goods</label><label><input type="checkbox" id="1" name="typeOfDispute1"> Non-Delivery</label><label><input type="checkbox" id="2" name="typeOfDispute2"> Goods Not As Contracted</label><label><input type="checkbox" id="3" name="typeOfDispute3"> Non-Payment</label><label><input type="checkbox" id="4" name="typeOfDispute4"> Cancellation/Opt Out</label><label><input type="checkbox" id="5" name="typeOfDispute5"> Refund (motor vehicle deposit)</label><label><input type="checkbox" id="6" name="typeOfDispute6"> Unfair Practice in relation to Hire Purchase Agreements</label><label><input type="checkbox" id="7" name="typeOfDispute7"> Others</label><div class="other"></div></div><div class="form-group" data-group="services"><div class="selectBox"><select aria-label="services group"><option>CONTRACT FOR PROVISION OF SERVICES</option></select></div><label><input type="checkbox" id="8" name="typeOfDispute8"> Unsatisfactory Services</label><label><input type="checkbox" id="9" name="typeOfDispute9"> Incomplete Services</label><label><input type="checkbox" id="10" name="typeOfDispute10"> Renovation Services</label><label><input type="checkbox" id="11" name="typeOfDispute11"> No Services Rendered</label><label><input type="checkbox" id="12" name="typeOfDispute12"> Non-Payment</label><label><input type="checkbox" id="13" name="typeOfDispute13"> Others</label><div class="other"></div></div><div class="form-group" data-group="property"><div class="selectBox"><select aria-label="property group"><option>DAMAGE TO PROPERTY</option></select></div><label><input type="checkbox" id="16" name="typeOfDispute16"> Owner of Property</label><label><input type="checkbox" id="17" name="typeOfDispute17"> Damage not arising from motor vehicle accident</label><label><input type="checkbox" id="18" name="typeOfDispute18"> Others</label><div class="other"></div></div><div class="form-group" data-group="residential"><div class="selectBox"><select aria-label="residential group"><option>LEASE NOT EXCEEDING 2 YEARS (RESIDENTIAL PREMISES)</option></select></div><label><input type="checkbox" id="24" name="typeOfDispute24"> Breach of Tenant's Obligation</label><label><input type="checkbox" id="25" name="typeOfDispute25"> Breach of Landlord's Obligation</label><label><input type="checkbox" id="26" name="typeOfDispute26"> Refund of Rental Deposit</label><label><input type="checkbox" id="27" name="typeOfDispute27"> Rental Arrears</label><label><input type="checkbox" id="28" name="typeOfDispute28"> Others</label><div class="other"></div></div><div id="revealed"></div><div id="claimAmountConsent"></div><div id="questions1Row"></div><button type="submit" id="submit" disabled>Submit</button></form></app-sct-prefiling>
+<script>
+const dynamic = new URLSearchParams(location.search).has('dynamic');
+if (!dynamic) document.querySelectorAll('[data-group]:not([data-group="goods"])').forEach(el=>el.remove());
+window.submissions = 0;
+document.querySelector('form').addEventListener('submit',e=>{e.preventDefault();window.submissions++;});
+const otherNames={goods:'salesOthersDesc',services:'serviceOthersDesc',property:'damagedOthersDesc',residential:'rentalOthersDesc'};
+let changeVersion=0;
+for (const checkbox of document.querySelectorAll('input[type=checkbox]')) checkbox.addEventListener('change',()=>{
+ const current=++changeVersion;
+ const reveal=()=>{
+  if(current!==changeVersion)return;
+  const selected=[...document.querySelectorAll('input[type=checkbox]:checked')];
+  document.querySelector('#questions1Row').replaceChildren();
+  document.querySelector('#claimAmountConsent').replaceChildren();
+  document.querySelector('#submit').disabled=true;
+  for(const group of document.querySelectorAll('[data-group]')) {
+   const others=[...group.querySelectorAll('label')].some(label=>label.textContent.trim()==='Others'&&label.querySelector('input').checked);
+   group.querySelector('.other').innerHTML=dynamic&&others?'<input maxlength="50" required name="'+otherNames[group.dataset.group]+'" placeholder="Type of Dispute">':'';
+  }
+  document.querySelector('#revealed').innerHTML=selected.length?'<input readonly name="d2" ngbdatepicker placeholder="dd/mm/yyyy" required><input id="cAmount" name="cAmount" aria-label="Claim Amount" required>':'';
+  if(!selected.length||!dynamic)return;
+  document.querySelector('[name=d2]').addEventListener('click',openCalendar);
+  document.querySelector('#cAmount').addEventListener('input',()=>{
+   const version=changeVersion;
+   setTimeout(()=>{
+    if(version!==changeVersion)return;
+    const amount=Number(document.querySelector('#cAmount').value);
+    if(amount>20000) question('claimAmountConsent','Is there a signed memorandum of consent by all parties to have the matter heard at the SCT?',()=>firstQuestion());
+    else firstQuestion();
+   },350);
+  });
+ };
+ if(dynamic)setTimeout(reveal,350);else reveal();
+});
+function question(target,text,next){
+ const root=document.querySelector('#'+target);
+ const row=document.createElement('div');
+ row.innerHTML='<div class="col-sm-9"><div class="form-group">'+text+'<div class="validation"></div><input type="hidden"></div></div><div class="col-sm-3"><div class="form-group pull-right"><button type="button">Yes</button><button type="button">No</button></div></div>';
+ root.append(row);
+ for(const button of row.querySelectorAll('button'))button.addEventListener('click',()=>{
+  const group=button.parentElement;
+  group.textContent=button.textContent.toUpperCase();
+  setTimeout(()=>next(button.textContent),350);
+ });
+}
+function firstQuestion(){
+ if(document.querySelector('#questions1Row').children.length)return;
+ question('questions1Row','Has the respondent agreed to the proposed resolution?',answer=>{
+  question('questions1Row',answer==='Yes'?'Was that agreement recorded in writing?':'Have you attempted to contact the respondent?',()=>{
+   document.querySelector('#submit').disabled=false;
+  });
+ });
+}
+function openCalendar(){
+ const existing=document.querySelector('ngb-datepicker');
+ if(existing){existing.remove();return;}
+ const picker=document.createElement('ngb-datepicker');
+ picker.innerHTML='<select aria-label="Select month">'+Array.from({length:12},(_,i)=>'<option value="'+(i+1)+'">'+(i+1)+'</option>').join('')+'</select><select aria-label="Select year">'+Array.from({length:11},(_,i)=>'<option value="'+(2016+i)+'">'+(2016+i)+'</option>').join('')+'</select><div role="grid"></div>';
+ document.body.append(picker);
+ const month=picker.querySelector('[aria-label="Select month"]'),year=picker.querySelector('[aria-label="Select year"]');
+ month.value='9';year.value='2026';
+ function draw(){
+  const grid=picker.querySelector('[role=grid]');grid.replaceChildren();
+  for(let day=1;day<=new Date(Number(year.value),Number(month.value),0).getDate();day++){
+   const cell=document.createElement('div');cell.setAttribute('role','gridcell');
+   cell.setAttribute('aria-label',new Intl.DateTimeFormat('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'}).format(new Date(Number(year.value),Number(month.value)-1,day)));
+   cell.textContent=String(day);
+   cell.addEventListener('click',()=>{
+    const input=document.querySelector('[name=d2]');
+    input.value=String(day).padStart(2,'0')+'/'+month.value.padStart(2,'0')+'/'+year.value;
+    input.dispatchEvent(new Event('change',{bubbles:true}));picker.remove();
+   });grid.append(cell);
+  }
+ }
+ month.addEventListener('change',draw);year.addEventListener('change',draw);draw();
+}
+</script></body></html>
