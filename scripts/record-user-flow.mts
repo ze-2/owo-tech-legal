@@ -30,7 +30,7 @@ await display.setContent('<html><body style="margin:0;background:#11271e"><canva
 const videoEnv = { ...process.env };
 // Nix-packaged FFmpeg uses its own linked libraries, not Chromium's runtime overrides.
 if (videoEnv.NIX_LD) delete videoEnv.LD_LIBRARY_PATH;
-const encoder = spawn(ffmpeg, ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', '4', '-vcodec', 'png', '-i', 'pipe:0',
+const encoder = spawn(ffmpeg, ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', '15', '-vcodec', 'png', '-i', 'pipe:0',
   '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '21', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', path.join(output, 'clearclaim-user-flow.mp4')],
 { stdio: ['pipe', 'ignore', 'pipe'], env: videoEnv });
 let encoderError = '';
@@ -45,7 +45,7 @@ let frames = 0, recording = true, captureError: unknown = null;
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 function chapter(next: string) {
   title = next;
-  chapters.push({ seconds: frames / 4, title });
+  chapters.push({ seconds: frames / 15, title });
   console.log(next);
 }
 async function capture() {
@@ -81,7 +81,7 @@ const captureLoop = (async () => {
     if (!left) { await delay(100); continue; }
     const started = Date.now();
     try { await capture(); } catch (error) { captureError = error; console.error('Capture failed:', error); break; }
-    await delay(Math.max(0, 250 - (Date.now() - started)));
+    await delay(Math.max(0, 67 - (Date.now() - started)));
   }
 })();
 const hold = async (ms = 1800) => { await delay(ms); if (captureError) throw captureError; };
@@ -205,7 +205,7 @@ try {
   await captureLoop;
   encoder.stdin.end();
   const [code] = await encoderDone;
-  writeFileSync(path.join(output, 'chapters.json'), JSON.stringify({ completed, fps: 4, durationSeconds: frames / 4, chapters, answers, submitted: false }, null, 2));
+  writeFileSync(path.join(output, 'chapters.json'), JSON.stringify({ completed, fps: 15, durationSeconds: frames / 15, chapters, answers, submitted: false }, null, 2));
   await browser.close();
   await displayBrowser.close();
   if (captureError) throw captureError;
@@ -223,7 +223,8 @@ function answerForFictionalScenario(question: string): 'Yes' | 'No' {
   const yes = [/signed memorandum of consent/i, /correct party.*contractual obligation/i, /recent.*ACRA record/i,
     /contract for goods sold\/bought/i, /evidenced in writing/i, /credit term or delivery date lapsed/i,
     /Were the goods delivered/i, /seeking a Money Order/i, /residing\/located in Singapore/i,
-    /locate and personally serve/i];
+    /locate and personally serve/i, /damages or defects/i, /inform.*other party.*defects/i,
+    /defects occur within 6 months/i];
   if (no.some((pattern) => pattern.test(question))) return 'No';
   if (yes.some((pattern) => pattern.test(question))) return 'Yes';
   throw new Error(`Add an explicit fictional-scenario answer for: ${question}`);
