@@ -7,7 +7,11 @@ import {
   type ResearchSection,
 } from "./claim";
 import { isOfficialSource, researchTopics, topicQuery } from "./sources";
-import { generateResearchFields, type RetrievedSource } from "./openai";
+import {
+  generateResearchFields,
+  type ProviderCallOptions,
+  type RetrievedSource,
+} from "./openai";
 import { RequestError } from "./http";
 
 // Exa is now retrieval-only. All text generation (organisation, research
@@ -28,7 +32,13 @@ const searchResponseSchema = z.object({
 export type ExaSearchResult = z.infer<typeof searchResponseSchema>["results"];
 
 const EXA_SEARCH_ENDPOINT = "https://api.exa.ai/search";
-const EXA_REQUEST_TIMEOUT_MS = 55000;
+const EXA_REQUEST_TIMEOUT_MS = 20000;
+/**
+ * Whole-request budget for the five concurrent sections, kept below the route's
+ * maxDuration so a slow section degrades to "unavailable" (which the UI already
+ * renders) rather than the platform killing the request.
+ */
+const RESEARCH_BUDGET_MS = 50000;
 const EXA_RESULTS_PER_QUERY = 4;
 const EXA_MAX_CHARACTERS = 6000;
 const EXA_MAX_AGE_HOURS = 24;
@@ -41,7 +51,10 @@ const EXA_OFFICIAL_DOMAINS = [
 const GUIDANCE_FIELDS = ["guidance", "counterpoint", "missingInfo"] as const;
 
 /** Retrieval-only Exa search restricted to official Judiciary sources. */
-export async function searchSources(query: string): Promise<ExaSearchResult> {
+export async function searchSources(
+  query: string,
+  options: ProviderCallOptions = {},
+): Promise<ExaSearchResult> {
   const key = process.env.EXA_API_KEY;
   if (!key)
     throw new RequestError(
@@ -64,7 +77,9 @@ export async function searchSources(query: string): Promise<ExaSearchResult> {
           maxAgeHours: EXA_MAX_AGE_HOURS,
         },
       }),
-      signal: AbortSignal.timeout(EXA_REQUEST_TIMEOUT_MS),
+      // Bound retrieval by the request's own deadline as well as its own
+      // timeout, and cancel it when the browser disconnects.
+      signal: retrievalSignal(options),
       cache: "no-store",
     });
   } catch {
@@ -84,6 +99,22 @@ export async function searchSources(query: string): Promise<ExaSearchResult> {
   return parsed.data.results;
 }
 
+/**
+ * Retrieval must not outlive the request that asked for it. Combine its own
+ * timeout with any remaining deadline and the inbound client signal.
+ */
+function retrievalSignal(options: ProviderCallOptions): AbortSignal {
+  const budget = options.deadline
+    ? Math.max(0, options.deadline - Date.now())
+    : EXA_REQUEST_TIMEOUT_MS;
+  const timeout = AbortSignal.timeout(
+    Math.min(EXA_REQUEST_TIMEOUT_MS, budget),
+  );
+  return options.signal
+    ? AbortSignal.any([timeout, options.signal])
+    : timeout;
+}
+
 function toSearchErrorMessage(status: number): string {
   if (status === 401 || status === 403) {
     return "The server’s Exa API key was not accepted. Check its configuration.";
@@ -97,13 +128,14 @@ export async function researchSection(
   id: string,
   draft: Draft,
   evidence: Evidence[],
+  options: ProviderCallOptions = {},
 ): Promise<ResearchSection> {
   const topic = researchTopics.find((item) => item.id === id)!;
   const query = topicQuery(id, draft, evidence);
   // Retrieval (Exa) then grounded generation (OpenAI). Model citations are
   // claims until intersected with the retrieved URL set and the allowlist;
   // do not display a generated field without that grounding.
-  const results = await searchSources(query);
+  const results = await searchSources(query, options);
   const retrieved: RetrievedSource[] = results.map((item) => ({
     title: item.title,
     url: item.url,
@@ -115,6 +147,7 @@ export async function researchSection(
     draft,
     evidence,
     retrieved,
+    options,
   });
   const retrievedUrls = new Set(
     results
@@ -167,9 +200,18 @@ export async function researchSection(
 export async function researchClaim(
   draft: Draft,
   evidence: Evidence[],
+  options: ProviderCallOptions = {},
 ): Promise<Research> {
+  // One deadline shared by all five concurrent sections, so a slow section
+  // cannot push the whole request past the route limit.
+  const shared: ProviderCallOptions = {
+    ...options,
+    deadline: options.deadline ?? Date.now() + RESEARCH_BUDGET_MS,
+  };
   const results = await Promise.allSettled(
-    researchTopics.map((topic) => researchSection(topic.id, draft, evidence)),
+    researchTopics.map((topic) =>
+      researchSection(topic.id, draft, evidence, shared),
+    ),
   );
   const sections: ResearchSection[] = results.map((result, index) => {
     if (result.status === "fulfilled") return result.value;

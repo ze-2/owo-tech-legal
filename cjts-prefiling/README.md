@@ -31,6 +31,14 @@ The CJTS cause-of-action date is a read-only `ngbdatepicker` control, so the ext
 
 The exact motor-vehicle-deposit mapping still requires the user to review and press Apply. Broad categories cannot determine facts such as non-delivery versus defective goods, landlord versus tenant obligations, whether an unfair practice concerns hire purchase, or whether property damage arose from a motor accident.
 
-`claim-type.mjs` contains the reviewed mapping and all 22 current portal options. `assessment-assist.mjs` performs the isolated scan/click/fill actions. `actions.json` is the machine-readable source record. `transfer.mjs` validates the local Clearclaim package before using its approved category or amount.
+`claim-type.mjs` contains the reviewed mapping and all 22 current portal options. `assessment-assist.mjs` performs the isolated scan/click/fill actions. `actions.json` is the machine-readable source record. `transfer.mjs` validates the local Clearclaim package before using its approved category or amount, and `assessment-assist.mjs` re-checks that each value is approved at the injected-script boundary rather than trusting what the popup passed it.
+
+`transfer.mjs` must stay **byte-identical** to `extension/shared/transfer.mjs`. Each extension loads under its own `chrome-extension://` origin and cannot import across folders, and there is no build step, so the contract is duplicated on disk by necessity. Edit one and copy it to the other; `tests/transfer-parity.test.ts` fails if they diverge.
+
+## Verification status
+
+`tests/browser/cjts-prefiling.spec.ts` loads this extension unpacked and drives the real popup through scan and apply against `/mock-sct.html`, and covers `run-action.mjs` against `/mock-terms.html`. Those fixtures encode the control shapes recorded in `actions.json` on 2026-09-05.
+
+**The live CJTS selectors have not been re-confirmed since that date.** A passing suite does not mean the portal still matches. Before relying on this helper for real filing, re-check each assumption — the exact route, `sessionStorage.TribunalType`, the `app-sct-prefiling` and `app-prefiling-terms` component names, `.form-group`/`.selectBox` nesting, option label text, `input#cAmount[name="cAmount"]`, `input[name="d2"][ngbdatepicker]`, and the three terms-page selectors — against the rendered portal using fictional data.
 
 The terms page itself has no editable fields. Its available actions remain under **Terms-page actions** in the popup: Terms of Use, Cancel, and Proceed. Proceed uses the portal’s own reCAPTCHA verification. The helper does not solve CAPTCHA, log in, submit the assessment, file a claim, upload evidence, or make payments.

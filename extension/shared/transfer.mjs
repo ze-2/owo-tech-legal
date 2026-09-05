@@ -1,4 +1,15 @@
-/** Shared wire contract. No case narrative, evidence, or research outside approved fields. */
+/**
+ * Shared wire contract. No case narrative, evidence, or research outside
+ * approved fields.
+ *
+ * MIRRORED FILE — this exact content also lives at `cjts-prefiling/transfer.mjs`.
+ * Each unpacked extension is loaded independently under its own
+ * `chrome-extension://` origin and cannot import across folders, and there is no
+ * build step, so the contract is duplicated on disk by necessity. The copies
+ * previously drifted (a version-2 package reported two different errors), so
+ * `tests/transfer-parity.test.ts` fails if they stop being byte-identical.
+ * Edit one, copy it to the other.
+ */
 export const filingFields = Object.freeze({
   claimant: "Claimant particulars",
   respondent: "Respondent particulars",
@@ -69,6 +80,7 @@ export function parsePackage(input) {
   for (const [key, field] of entries) {
     if (
       !field ||
+      typeof field !== "object" ||
       Object.keys(field).some(
         (k) => !["value", "review", "provenance"].includes(k),
       ) ||

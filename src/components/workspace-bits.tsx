@@ -119,7 +119,7 @@ export function ResearchCard({ section }: { section: ResearchSection }) {
         <p>{section.query}</p>
         <small>
           {section.status === "live"
-            ? "Searched official Judiciary sources; guidance drafted with OpenAI."
+            ? "Searched official Judiciary sources; guidance drafted by the AI provider."
             : "Suggested query. This section has no completed live search."}
         </small>
       </details>

@@ -101,7 +101,7 @@ let activeProviderCalls = 0;
 export async function withCapacity<T>(work: () => Promise<T>): Promise<T> {
   if (activeProviderCalls >= MAX_CONCURRENT_PROVIDER_CALLS) {
     throw new RequestError(
-      "The research service is busy. Please try again shortly.",
+      "The server is handling too many AI requests right now. Please try again shortly.",
       429,
     );
   }

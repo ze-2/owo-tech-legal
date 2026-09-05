@@ -33,7 +33,9 @@ export async function POST(request: Request) {
       );
     return json(
       await withCapacity(() =>
-        researchClaim(parsed.data.draft, parsed.data.evidence),
+        researchClaim(parsed.data.draft, parsed.data.evidence, {
+          signal: request.signal,
+        }),
       ),
     );
   } catch (error) {

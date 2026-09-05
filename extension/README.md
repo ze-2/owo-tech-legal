@@ -14,6 +14,8 @@ The popup uses only `activeTab` and `scripting` permissions. It processes files 
 
 `form-assist.mjs` is the single mapping implementation used by the extension and browser tests. It matches exact normalised labels/ARIA labels (for example **Description of claim**), or explicit demo attributes (`data-clearclaim-field="summary"`, `name="clearclaim_summary"`). The keys and accepted label aliases are listed in its `mapping` object. The shared contract and validation are in `shared/transfer.mjs`, imported directly by both website and extension.
 
+`shared/transfer.mjs` must stay **byte-identical** to `cjts-prefiling/transfer.mjs`. Each extension loads under its own `chrome-extension://` origin and cannot import across folders, and there is no build step, so the contract is duplicated on disk by necessity. Edit one and copy it to the other; `tests/transfer-parity.test.ts` fails if they diverge.
+
 Supported keys: claimant/respondent **particulars**, claim amount, category, summary, requested outcome, cause-of-action date, chronology, existing case reference, assessment ID. Particulars may include names and addresses, so they are deliberately not mapped into a name-only field. The requested outcome is a free-text remedy, not an automatic selection of one of the court's order types.
 
 **No live authenticated CJTS field selectors have been verified.** Semantic matches on the real site are tentative and require careful preview. The fixture is the tested compatibility target, not a replica of the official portal. To add a verified live field, inspect only that control manually, record its meaning here, add a precise alias/attribute in the mapping, and add a fixture test. Do not infer selectors or assume a field is equivalent because it looks similar.

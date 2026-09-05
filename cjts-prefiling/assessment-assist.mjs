@@ -111,9 +111,21 @@ export function assistAssessment(action, supportedGroups, payload = {}) {
     });
   }
 
+  // Defence in depth, matching form-assist.mjs: the popup only ever forwards
+  // parsePackage output, but the injected script re-checks approval itself
+  // rather than trusting a bare value handed across the boundary.
+  const approvedValue = (field) =>
+    field &&
+    typeof field === "object" &&
+    field.review === "approved" &&
+    typeof field.value === "string" &&
+    field.value.trim()
+      ? field.value
+      : "";
+
   let amount = null;
-  const amountValue = payload.amount;
-  if (typeof amountValue === "string" && amountValue) {
+  const amountValue = approvedValue(payload.amount);
+  if (amountValue) {
     const controls = [...root.querySelectorAll('input#cAmount[name="cAmount"]')];
     const control = controls.length === 1 ? controls[0] : null;
     if (!control)
@@ -146,7 +158,7 @@ export function assistAssessment(action, supportedGroups, payload = {}) {
   }
   const dateControl = root.querySelector('input[name="d2"][ngbdatepicker]');
   const incidentDate =
-    payload.incidentDate && dateControl
+    approvedValue(payload.incidentDate) && dateControl
       ? {
           filled: false,
           reason: "Use the CJTS date picker; direct entry is read-only",

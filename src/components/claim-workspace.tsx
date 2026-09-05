@@ -113,6 +113,25 @@ export function ClaimWorkspace({
   const originals = useRef<Map<string, File>>(new Map());
   const summaryRef = useRef<HTMLHeadingElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const requestSeq = useRef(0);
+  const inFlight = useRef<AbortController | null>(null);
+
+  /**
+   * Supersede in-flight provider work. Starting a new organise/research cancels
+   * the previous one and stamps a token, so a late response from the older
+   * request can never overwrite the newer draft. The disabled fieldset makes
+   * overlap unlikely, not impossible — this is the actual guarantee.
+   */
+  function beginRequest() {
+    inFlight.current?.abort();
+    const controller = new AbortController();
+    inFlight.current = controller;
+    const token = ++requestSeq.current;
+    return {
+      signal: controller.signal,
+      isCurrent: () => requestSeq.current === token,
+    };
+  }
 
   useEffect(() => {
     if (sourceModal) dialogRef.current?.showModal();
@@ -195,6 +214,7 @@ export function ClaimWorkspace({
     setProblem(original);
     invalidate(true);
     setError("");
+    const request = beginRequest();
     setBusy("Organising your latest message…");
     try {
       const result = await postJson<{
@@ -202,7 +222,12 @@ export function ClaimWorkspace({
         observations: Observation[];
         mode: "basic" | "ai";
         followUp: string;
-      }>("/api/conversation", { original, outcome, evidence, consent });
+      }>(
+        "/api/conversation",
+        { original, outcome, evidence, consent },
+        request.signal,
+      );
+      if (!request.isCurrent()) return true;
       const merged = mergeConversationDraft(
         result.draft,
         draft,
@@ -241,6 +266,7 @@ export function ClaimWorkspace({
       setConversationPrompt(`${prefix}${suffix}`);
       previousPrompt.current = prompt;
     } catch (err) {
+      if (!request.isCurrent()) return true;
       setError(
         err instanceof Error ? err.message : "Could not organise the message.",
       );
@@ -248,7 +274,7 @@ export function ClaimWorkspace({
         "Your original message is retained. Continue with basic organisation or retry later.",
       );
     } finally {
-      setBusy("");
+      if (request.isCurrent()) setBusy("");
     }
     return true;
   }
@@ -363,6 +389,7 @@ export function ClaimWorkspace({
       setError("Add a few words about the outcome you want.");
       return;
     }
+    const request = beginRequest();
     setBusy("Organising your account into claim information…");
     try {
       const result = basic
@@ -370,7 +397,9 @@ export function ClaimWorkspace({
         : await postJson<{ draft: Draft; mode: "basic" | "ai" }>(
             "/api/prepare",
             buildIntake(),
+            request.signal,
           );
+      if (!request.isCurrent()) return;
       const next = mergePreparedDraft(
         result.draft,
         draft,
@@ -393,13 +422,14 @@ export function ClaimWorkspace({
       setReviewed(false);
       navigate(1);
     } catch (err) {
+      if (!request.isCurrent()) return;
       setError(
         err instanceof Error
           ? err.message
           : "Could not organise the claim. Please try basic organisation.",
       );
     } finally {
-      setBusy("");
+      if (request.isCurrent()) setBusy("");
     }
   }
 
@@ -410,21 +440,27 @@ export function ClaimWorkspace({
       navigate(2);
       return;
     }
+    const request = beginRequest();
     setBusy("Checking five sections against official SCT sources…");
     setError("");
     try {
-      setResearch(
-        await postJson<Research>("/api/research", { draft, evidence, consent }),
+      const result = await postJson<Research>(
+        "/api/research",
+        { draft, evidence, consent },
+        request.signal,
       );
+      if (!request.isCurrent()) return;
+      setResearch(result);
       navigate(2);
     } catch (err) {
+      if (!request.isCurrent()) return;
       setError(
         err instanceof Error
           ? err.message
           : "Research could not be completed. Your draft is still here.",
       );
     } finally {
-      setBusy("");
+      if (request.isCurrent()) setBusy("");
     }
   }
 
@@ -1011,7 +1047,7 @@ export function ClaimWorkspace({
                           guidance.
                           <small>
                             {researchConfigured
-                              ? "Your account, extracted document text and evidence descriptions will be sent to OpenAI for organisation, and to Exa search plus OpenAI for official-source research. Remove sensitive information you don’t want to share. Original files are sent to neither."
+                              ? "Your account, extracted document text and evidence descriptions will be sent to the configured AI provider (OpenRouter by default) for organisation and research drafting, and generic queries go to Exa search. Remove sensitive information you don’t want to share. Original files are sent to neither."
                               : "Live research is not configured. You can still organise your information and read the official reference guidance."}
                           </small>
                         </span>
@@ -1291,7 +1327,7 @@ export function ClaimWorkspace({
                       <span>
                         Allow AI processing of this draft, extracted document text
                         and evidence descriptions for official-source research
-                        (Exa search plus OpenAI drafting).
+                        (Exa search plus AI drafting).
                       </span>
                     </label>
                   )}
@@ -1809,8 +1845,9 @@ export function ClaimWorkspace({
             Your workspace is held in this tab’s memory and clears on refresh.
             PDF and DOCX files are sent to this app’s server for text extraction
             in memory. Photos need your descriptions. If you enable research,
-            case text and evidence descriptions are sent to OpenAI for
-            organisation and research drafting, while generic search queries go
+            case text and evidence descriptions are sent to the configured AI
+            provider (OpenRouter by default) for organisation and research
+            drafting, while generic search queries go
             through Exa search. Download a
             draft before leaving.
           </p>

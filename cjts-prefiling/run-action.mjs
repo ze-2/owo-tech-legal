@@ -1,7 +1,15 @@
 /** Self-contained for chrome.scripting.executeScript's isolated world. */
 export function runAction(actionId) {
-  if (location.origin !== "https://cjts.judiciary.gov.sg" ||
-      location.pathname !== "/prefiling/prefilingTerms") {
+  const isOfficial =
+    location.origin === "https://cjts.judiciary.gov.sg" &&
+    location.pathname === "/prefiling/prefilingTerms";
+  // Same narrow fixture allowance form-assist.mjs and assessment-assist.mjs
+  // already use. Without it this module could not be tested at all, which is
+  // why it was the only one clicking portal buttons with no coverage.
+  const isFixture =
+    ["localhost", "127.0.0.1"].includes(location.hostname) &&
+    location.pathname === "/mock-terms.html";
+  if (!isOfficial && !isFixture) {
     throw new Error("Open the official CJTS pre-filing terms page first.");
   }
   // Keep this allowlist aligned with actions.json; never accept imported selectors.

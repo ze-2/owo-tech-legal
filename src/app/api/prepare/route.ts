@@ -19,7 +19,9 @@ export async function POST(request: Request) {
     if (!parsed.success) throw new RequestError(parsed.error.issues[0].message);
     const live = parsed.data.consent && Boolean(process.env.OPENAI_API_KEY);
     const draft = live
-      ? await withCapacity(() => organiseWithOpenAI(parsed.data))
+      ? await withCapacity(() =>
+          organiseWithOpenAI(parsed.data, { signal: request.signal }),
+        )
       : organiseLocally(parsed.data);
     return json({ draft, mode: live ? "ai" : "basic" });
   } catch (error) {

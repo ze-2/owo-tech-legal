@@ -26,7 +26,9 @@ export async function POST(request: Request) {
     const live = consent && Boolean(process.env.OPENAI_API_KEY);
     const result = live
       ? await withCapacity(() =>
-          organiseConversationWithOpenAI(original, outcome, evidence),
+          organiseConversationWithOpenAI(original, outcome, evidence, {
+            signal: request.signal,
+          }),
         )
       : localConversation(original, outcome, evidence);
     return json({

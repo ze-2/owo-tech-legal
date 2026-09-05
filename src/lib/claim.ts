@@ -129,6 +129,44 @@ const PLAIN_AMOUNT_PATTERN = /^\d+(?:\.\d{1,2})?$/;
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const CURRENCY_PREFIX_PATTERN = /(?:S\$|SGD|\$|,)/gi;
 
+/**
+ * Field-level coercions shared by local extraction and model output. Models on
+ * providers without enforced structured output return a free-text category, a
+ * formatted amount ("SGD 1,450") or a written date ("14 March 2026"); a single
+ * unusable field must not discard the rest of an otherwise good draft, so each
+ * one falls back to this app's existing "unknown" value instead of throwing.
+ */
+export function normalizeClaimType(value: unknown): (typeof claimTypes)[number] {
+  if (typeof value !== "string") return "Not sure yet";
+  const candidate = value.trim().toLowerCase();
+  return (
+    claimTypes.find((type) => type.toLowerCase() === candidate) ?? "Not sure yet"
+  );
+}
+
+/** Strip currency symbols and separators; blank anything still not a plain amount. */
+export function normalizeAmount(value: unknown): string {
+  const raw =
+    typeof value === "number" && Number.isFinite(value)
+      ? String(value)
+      : typeof value === "string"
+        ? value
+        : "";
+  const stripped = raw.replace(CURRENCY_PREFIX_PATTERN, "").trim();
+  return PLAIN_AMOUNT_PATTERN.test(stripped) ? stripped : "";
+}
+
+/**
+ * Keep an explicit ISO date, blank everything else. Deliberately does not parse
+ * written dates: guessing an exact date the user never stated is the failure
+ * mode guardModelDate exists to prevent.
+ */
+export function normalizeIsoDate(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  return ISO_DATE_PATTERN.test(trimmed) ? trimmed : "";
+}
+
 // SCT limits and filing clock. Confirm against the official guide; not a legal finding.
 const STANDARD_CLAIM_LIMIT = 20000;
 const CONSENTED_CLAIM_LIMIT = 30000;
@@ -138,23 +176,14 @@ const FILING_WINDOW_YEARS = 2;
 /** Conservative offline extraction: keep the entire account, only populate explicit labels. */
 export function organiseLocally(intake: Intake): Draft {
   const text = intake.problem;
-  const category = labelled(text, "Claim type|Category");
-  const rawAmount = labelled(text, "Claim amount|Amount claimed|Amount")
-    .replace(CURRENCY_PREFIX_PATTERN, "")
-    .trim();
-  const incidentDate = labelled(
-    text,
-    "Incident date|Date of breach|Cause of action date",
-  );
   return {
     claimant: labelled(text, "Claimant|Your name"),
     respondent: labelled(text, "Respondent|Other party"),
-    claimType:
-      claimTypes.find(
-        (type) => type.toLowerCase() === category.toLowerCase(),
-      ) ?? "Not sure yet",
-    incidentDate: ISO_DATE_PATTERN.test(incidentDate) ? incidentDate : "",
-    amount: PLAIN_AMOUNT_PATTERN.test(rawAmount) ? rawAmount : "",
+    claimType: normalizeClaimType(labelled(text, "Claim type|Category")),
+    incidentDate: normalizeIsoDate(
+      labelled(text, "Incident date|Date of breach|Cause of action date"),
+    ),
+    amount: normalizeAmount(labelled(text, "Claim amount|Amount claimed|Amount")),
     summary: text,
     timeline: labelled(text, "Timeline|Chronology"),
     outcome: intake.outcome || labelled(text, "Outcome|Remedy|Relief sought"),

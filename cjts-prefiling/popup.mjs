@@ -140,8 +140,10 @@ applyButton.addEventListener("click", async () => {
           expected: Object.fromEntries(
             rows.map((row) => [row.id, row.signature]),
           ),
-          amount: pack?.fields.amount?.value || "",
-          incidentDate: pack?.fields.incidentDate?.value || "",
+          // Pass the approved field objects, not bare values, so the injected
+          // script can re-verify approval at its own boundary.
+          amount: pack?.fields.amount || null,
+          incidentDate: pack?.fields.incidentDate || null,
         },
       ],
     });

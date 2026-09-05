@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>Mock CJTS pre-filing terms</title></head>
+  <body>
+    <!--
+      Local fixture for cjts-prefiling/run-action.mjs. The control shapes mirror
+      the selectors recorded in cjts-prefiling/actions.json (inspected 2026-09-05):
+      a.terms-of-use-blue[target="_blank"], button[aria-label="Cancel"] and
+      button#btnSubmit[aria-label="Proceed"], all scoped under app-prefiling-terms.
+      This is the tested compatibility target, not a replica of the official
+      portal, and its live selectors remain unverified against authenticated CJTS.
+    -->
+    <app-prefiling-terms>
+      <form id="frmPrefilingTerms">
+        <a class="terms-of-use-blue" target="_blank" href="https://www.judiciary.gov.sg/">Terms of Use</a>
+        <button type="button" aria-label="Cancel">Cancel</button>
+        <button type="button" id="btnSubmit" aria-label="Proceed">Proceed</button>
+      </form>
+      <!-- Present but hidden: the helper must never treat these as candidates. -->
+      <div hidden>
+        <button type="button" aria-label="Cancel">Cancel (hidden duplicate)</button>
+      </div>
+    </app-prefiling-terms>
+    <p id="action-status" role="status">Nothing clicked.</p>
+    <aside>Clearclaim demo fixture. This is not CJTS, an official court form, or a filing. Use fictional data.</aside>
+    <script>
+      // Record clicks instead of navigating, so a test can assert what the
+      // helper did without leaving the fixture.
+      window.clicks = [];
+      for (const el of document.querySelectorAll("app-prefiling-terms a, app-prefiling-terms button")) {
+        el.addEventListener("click", (event) => {
+          event.preventDefault();
+          window.clicks.push(el.getAttribute("aria-label") || el.textContent.trim());
+          document.querySelector("#action-status").textContent =
+            `Clicked: ${window.clicks.join(", ")}. Nothing submitted.`;
+        });
+      }
+    </script>
+  </body>
+</html>
