@@ -1,0 +1,14 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Libre+Caslon+Display&display=swap");
+
+:root {
+  --navy: #203c43;
+  --ink: #273c40;
+  --line: #e3e5df;
+  --paper: #fafaf6;
+  --white: #fff;
+  --focus: #a38b54;
+  --focus-green: #7b9587;
+  --space-sm: 8px;
+  --serif: "Libre Caslon Display", Georgia, "Times New Roman", serif;
+  --sans: "DM Sans", Arial, sans-serif;
+}

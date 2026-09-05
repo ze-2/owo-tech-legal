@@ -1,0 +1,15 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Clearclaim mock CJTS form</title><style>body{max-width:720px;margin:30px auto;padding:20px;font:16px/1.6 system-ui;color:#294334}label{display:block;margin-top:18px}input,textarea,select{display:block;box-sizing:border-box;width:100%;padding:12px;font:inherit}textarea{min-height:100px}button{margin-top:20px;padding:12px}:focus-visible{outline:3px solid #365943}aside{background:#fff3d6;padding:16px}</style></head><body><h1>Mock CJTS form</h1><aside>Clearclaim demo fixture. This is not CJTS, an official court form, or a filing. Use fictional data.</aside>
+<form id="claim-form">
+<label for="claimant">Claimant particulars</label><textarea id="claimant"></textarea>
+<label for="respondent">Respondent particulars</label><textarea id="respondent"></textarea>
+<label for="amount">Claim amount (SGD)</label><input id="amount" type="number" min="0.01" step="0.01">
+<label for="category">Claim category</label><select id="category"><option value="">Choose a category</option><option>Sale of goods</option><option>Provision of services</option><option>Residential tenancy</option><option>Property damage</option><option>Unfair practice</option><option>Motor vehicle deposit</option><option>Other</option></select>
+<label for="description">Description of claim</label><textarea id="description"></textarea>
+<label for="outcome">Requested outcome</label><textarea id="outcome"></textarea>
+<label for="incident">Cause-of-action date</label><input id="incident" type="date">
+<label for="timeline">Chronology</label><textarea id="timeline"></textarea>
+<label for="case-ref">Existing case reference</label><input id="case-ref">
+<label for="assessment">Pre-filing assessment ID</label><input id="assessment">
+<button type="submit">Demo submission button — manual only</button></form><p id="submission-status" role="status">Nothing submitted.</p>
+<script>window.submissionCount=0;document.querySelector('form').addEventListener('submit',event=>{event.preventDefault();window.submissionCount++;document.querySelector('#submission-status').textContent='Demo manual submit recorded. No claim filed.';});</script>
+</body></html>

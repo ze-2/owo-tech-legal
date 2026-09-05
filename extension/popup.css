@@ -1,0 +1,73 @@
+:root {
+  --popup-ink: #294334;
+  --popup-action: #365943;
+  --popup-focus: #95651d;
+  --popup-paper: #f7f9f1;
+  --popup-status: #e7eeda;
+  --popup-divider: #cbd7c1;
+  --popup-space-sm: 8px;
+  --popup-space-md: 12px;
+  --popup-space-lg: 20px;
+}
+
+body {
+  width: 390px;
+  max-width: 100%;
+  margin: 0;
+  padding: var(--popup-space-lg);
+  box-sizing: border-box;
+  background: var(--popup-paper);
+  color: var(--popup-ink);
+  font: 14px / 1.6 system-ui;
+}
+
+h1 {
+  font: 30px Georgia;
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 3px solid var(--popup-focus);
+  outline-offset: 3px;
+}
+
+label {
+  display: flex;
+  gap: var(--popup-space-sm);
+  margin: var(--popup-space-md) 0;
+  overflow-wrap: anywhere;
+}
+
+input[type="file"] {
+  max-width: 100%;
+}
+
+button {
+  padding: 10px;
+  margin: 8px 4px 4px 0;
+  background: var(--popup-action);
+  color: white;
+  border: 0;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+#status {
+  padding: 10px;
+  background: var(--popup-status);
+}
+
+#fields {
+  max-height: 330px;
+  overflow: auto;
+}
+
+#fields label {
+  border-bottom: 1px solid var(--popup-divider);
+  padding-bottom: 10px;
+}

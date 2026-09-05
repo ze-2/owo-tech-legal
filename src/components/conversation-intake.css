@@ -1,0 +1,23 @@
+.conversation select {
+  padding: 10px;
+  margin-top: 8px;
+}
+
+.conversation-prompt {
+  padding: 14px;
+  background: #edf2e4;
+  border-radius: 6px;
+}
+
+.conversation dl {
+  margin: 12px 0;
+}
+
+.conversation dt {
+  font-weight: 600;
+}
+
+.conversation dd {
+  margin: 0 0 10px;
+  white-space: pre-wrap;
+}
