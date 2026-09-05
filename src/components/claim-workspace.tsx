@@ -51,7 +51,7 @@ import { filingPack } from "@/lib/export";
 import { postJson } from "@/lib/api-client";
 import { extractFileText, validateSelectedFiles } from "@/lib/workspace-upload";
 import {
-  SAMPLE_CLAIM,
+  SAMPLE_CLAIMS,
   mergeConversationDraft,
   mergePreparedDraft,
 } from "@/lib/workspace-draft";
@@ -780,21 +780,27 @@ export function ClaimWorkspace({
                       </div>
                       <div className="example-line">
                         <Sparkles size={13} />
-                        <button
-                          type="button"
-                          className="text-button"
-                          disabled={Boolean(busy) || Boolean(problem)}
-                          onClick={() => {
-                            setProblem(SAMPLE_CLAIM.problem);
-                            setOutcome(SAMPLE_CLAIM.outcome);
-                            invalidate(true);
-                            setNotice(
-                              "Fictional example loaded. Replace these details with your own before preparing a claim.",
-                            );
-                          }}
-                        >
-                          Try a fictional example
-                        </button>
+                        <span>Try a fictional example:</span>
+                        <div className="example-options">
+                          {SAMPLE_CLAIMS.map((sample) => (
+                            <button
+                              key={sample.id}
+                              type="button"
+                              className="text-button"
+                              disabled={Boolean(busy) || Boolean(problem)}
+                              onClick={() => {
+                                setProblem(sample.problem);
+                                setOutcome(sample.outcome);
+                                invalidate(true);
+                                setNotice(
+                                  `${sample.label} example loaded. Replace these fictional details with your own before preparing a claim.`,
+                                );
+                              }}
+                            >
+                              {sample.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </section>
 

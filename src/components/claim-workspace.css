@@ -78,12 +78,25 @@ textarea::placeholder {
 
 .example-line {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
   gap: 6px;
   color: #9da98f;
   margin-top: 14px;
   padding-top: 13px;
   border-top: 1px solid #f0f2eb;
+}
+
+.example-line > span {
+  line-height: 1.8;
+}
+
+.example-options {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+  padding-left: 19px;
 }
 
 .example-line .text-button {

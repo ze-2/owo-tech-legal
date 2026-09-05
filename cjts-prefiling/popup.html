@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Clearclaim SCT assessment helper</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <h1>Clearclaim</h1>
+    <p>SCT pre-filing assessment helper</p>
+
+    <label for="package">Approved filing package (optional)</label>
+    <input id="package" type="file" accept=".json,application/json">
+    <button type="button" id="scan">Scan SCT options</button>
+    <p id="suggestion"></p>
+    <div id="options"></div>
+    <button type="button" id="apply" disabled>Apply selected options</button>
+    <button type="button" id="clear">Clear</button>
+    <p id="status" role="status" aria-live="polite">
+      Open the SCT pre-filing assessment, then scan.
+    </p>
+
+    <details>
+      <summary>Terms-page actions</summary>
+      <p>Proceed indicates agreement to the CJTS terms and starts its verification.</p>
+      <button type="button" data-action="terms">Terms of Use</button>
+      <button type="button" data-action="cancel">Cancel</button>
+      <button type="button" data-action="proceed">Proceed</button>
+    </details>
+    <p class="note">
+      Review the selected dispute types and all populated values in CJTS. This
+      helper does not submit the assessment.
+    </p>
+    <script type="module" src="popup.mjs"></script>
+  </body>
+</html>

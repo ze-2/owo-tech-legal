@@ -1,0 +1,92 @@
+:root {
+  color-scheme: light;
+}
+
+body {
+  box-sizing: border-box;
+  width: 420px;
+  max-width: 100%;
+  margin: 0;
+  padding: 18px;
+  color: #25362d;
+  background: #f7f9f4;
+  font: 14px/1.45 system-ui, sans-serif;
+}
+
+h1 {
+  margin: 0;
+  font: 28px Georgia, serif;
+}
+
+label {
+  display: block;
+  margin: 10px 0 4px;
+}
+
+input[type="file"] {
+  max-width: 100%;
+}
+
+button {
+  margin: 10px 5px 5px 0;
+  padding: 9px 11px;
+  border: 0;
+  border-radius: 5px;
+  color: white;
+  background: #365943;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.48;
+  cursor: default;
+}
+
+#status {
+  padding: 10px;
+  background: #e6eddc;
+}
+
+#suggestion {
+  color: #684b15;
+}
+
+#options {
+  max-height: 360px;
+  overflow: auto;
+}
+
+fieldset {
+  margin: 10px 0;
+  border: 1px solid #bdcbbd;
+}
+
+fieldset.recommended {
+  border: 3px solid #946a1c;
+}
+
+fieldset label {
+  display: flex;
+  gap: 8px;
+  align-items: start;
+}
+
+legend {
+  font-weight: 700;
+}
+
+.reason,
+.note {
+  color: #536159;
+  font-size: 12px;
+}
+
+summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+:focus-visible {
+  outline: 3px solid #946a1c;
+  outline-offset: 2px;
+}

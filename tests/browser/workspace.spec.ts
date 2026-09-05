@@ -18,14 +18,14 @@ test("new claim can be reviewed, researched in reference mode, and exported", as
   await expect(page.locator(".feedback[role=alert]")).toContainText(
     "at least 30 characters",
   );
-  await page.getByRole("button", { name: "Try a fictional example" }).click();
+  await page.getByRole("button", { name: "Sale of goods" }).click();
   await page
     .locator('input[aria-label="Attach evidence files"]')
     .setInputFiles({
       name: "receipt.txt",
       mimeType: "text/plain",
       buffer: Buffer.from(
-        "Receipt for kitchen cabinet works. Amount paid SGD 2400. Date 1 June 2026.",
+        "Receipt for an SGD 800 trombone deposit paid to Music Elements.",
       ),
     });
   await expect(
@@ -33,7 +33,7 @@ test("new claim can be reviewed, researched in reference mode, and exported", as
   ).toBeVisible();
   await page
     .getByLabel("What receipt.txt shows")
-    .fill("Evidence of the S$2,400 payment on 1 June 2026.");
+    .fill("Evidence of the S$800 deposit paid for the trombone.");
   await page.getByRole("button", { name: "Organise my claim" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
     "clearly organised",
@@ -41,10 +41,10 @@ test("new claim can be reviewed, researched in reference mode, and exported", as
   await expect(page.getByLabel("Your details (claimant)")).toHaveValue(
     "Alex Tan",
   );
-  await expect(page.getByLabel("Total claim value (S$)")).toHaveValue("2400");
+  await expect(page.getByLabel("Total claim value (S$)")).toHaveValue("800");
   await page
     .getByLabel("What has the other party said?")
-    .fill("They offered to replace only the drawer.");
+    .fill("They have not answered my calls or returned the deposit.");
   await page
     .getByLabel("Can the respondent be served in Singapore?")
     .selectOption("yes");

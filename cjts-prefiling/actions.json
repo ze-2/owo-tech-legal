@@ -1,0 +1,86 @@
+{
+  "sourcePage": "https://cjts.judiciary.gov.sg/prefiling/prefilingTerms",
+  "sourceBundle": "https://cjts.judiciary.gov.sg/assets/523.aa30ecea52444606.js",
+  "inspectedOn": "2026-09-05",
+  "verification": "Compiled Angular source and live rendered SCT DOM inspected with headless Chromium.",
+  "scope": ["app-prefiling-terms", "app-sct-prefiling"],
+  "fields": [
+    {
+      "source": "amount",
+      "target": "input#cAmount[name=\"cAmount\"]",
+      "action": "set value after an SCT dispute option reveals the control"
+    },
+    {
+      "source": "incidentDate",
+      "target": "input[name=\"d2\"][ngbdatepicker]",
+      "action": "manual: CJTS exposes a read-only date picker"
+    },
+    {
+      "source": "claimType",
+      "target": "Nature of Dispute option groups",
+      "action": "recommend a group or preselect an exact option; user confirms before click"
+    }
+  ],
+  "websiteFieldMapping": {
+    "claimant": null,
+    "respondent": null,
+    "amount": "Claim Amount (revealed after selecting a dispute option)",
+    "claimType": "Nature of Dispute group/option recommendation",
+    "summary": null,
+    "outcome": null,
+    "incidentDate": "Date of Cause of Action (manual date-picker selection)",
+    "timeline": null,
+    "caseNumber": null,
+    "assessmentId": null
+  },
+  "actions": [
+    {
+      "id": "terms",
+      "label": "Terms of Use",
+      "selector": "a.terms-of-use-blue[target=\"_blank\"]",
+      "effect": "Open the site's dynamically supplied terms link in a new tab."
+    },
+    {
+      "id": "cancel",
+      "label": "Cancel",
+      "selector": "button[type=\"button\"][aria-label=\"Cancel\"]",
+      "handler": "redirectToHome()",
+      "effect": "Navigate to /home."
+    },
+    {
+      "id": "proceed",
+      "label": "Proceed",
+      "selector": "button#btnSubmit[aria-label=\"Proceed\"]",
+      "handler": "submitCaptcha(frmPrefilingTerms)",
+      "effect": "Run the site's reCAPTCHA and server verification; on success open the assessment selected by the existing TribunalType session value. Using the service indicates agreement to its terms."
+    }
+  ],
+  "assessmentRoutes": {
+    "ECT": "/prefiling/ECTprefilingAssessment",
+    "PHC": "/prefiling/PHCprefilingAssessment",
+    "default": "/prefiling/prefilingAssessment"
+  },
+  "sctOptionGroups": [
+    {
+      "id": "goods",
+      "label": "CONTRACT FOR SALE OF GOODS",
+      "options": ["Defective Goods", "Non-Delivery", "Goods Not As Contracted", "Non-Payment", "Cancellation/Opt Out", "Refund (motor vehicle deposit)", "Unfair Practice in relation to Hire Purchase Agreements", "Others"]
+    },
+    {
+      "id": "services",
+      "label": "CONTRACT FOR PROVISION OF SERVICES",
+      "options": ["Unsatisfactory Services", "Incomplete Services", "Renovation Services", "No Services Rendered", "Non-Payment", "Others"]
+    },
+    {
+      "id": "property",
+      "label": "DAMAGE TO PROPERTY",
+      "options": ["Owner of Property", "Damage not arising from motor vehicle accident", "Others"]
+    },
+    {
+      "id": "residential",
+      "label": "LEASE NOT EXCEEDING 2 YEARS (RESIDENTIAL PREMISES)",
+      "options": ["Breach of Tenant's Obligation", "Breach of Landlord's Obligation", "Refund of Rental Deposit", "Rental Arrears", "Others"]
+    }
+  ],
+  "conditionalActions": "Success, warning and error dialogs contain OK and close controls. These are not automated."
+}

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>Mock SCT assessment</title></head>
+  <body>
+    <app-sct-prefiling>
+      <form>
+        <div class="form-group">
+          <div class="selectBox"><select aria-label="Group"><option>CONTRACT FOR SALE OF GOODS</option></select></div>
+          <label><input type="checkbox" id="0"> Defective Goods</label>
+          <label><input type="checkbox" id="1"> Non-Delivery</label>
+          <label><input type="checkbox" id="2"> Goods Not As Contracted</label>
+          <label><input type="checkbox" id="3"> Non-Payment</label>
+          <label><input type="checkbox" id="4"> Cancellation/Opt Out</label>
+          <label><input type="checkbox" id="5"> Refund (motor vehicle deposit)</label>
+          <label><input type="checkbox" id="6"> Unfair Practice in relation to Hire Purchase Agreements</label>
+          <label><input type="checkbox" id="7"> Others</label>
+        </div>
+        <div id="revealed"></div>
+      </form>
+    </app-sct-prefiling>
+    <script>
+      document.querySelector('input[type="checkbox"]').addEventListener('change', (event) => {
+        document.querySelector('#revealed').innerHTML = event.target.checked
+          ? '<input readonly name="d2" ngbdatepicker placeholder="dd/mm/yyyy"><input id="cAmount" name="cAmount" aria-label="Claim Amount">'
+          : '';
+      });
+    </script>
+  </body>
+</html>

@@ -83,6 +83,14 @@ test("organisation uses structured output and merges with local defaults", async
   );
 });
 
+test("organisation normalizes a numeric amount from compatible providers", async () => {
+  process.env.OPENAI_API_KEY = "test-openai-key";
+  useOpenAIFake({ ...extraction, amount: 800, timeline: [] });
+  const result = await organiseWithOpenAI(intake);
+  assert.equal(result.amount, "800");
+  assert.equal(result.timeline, "");
+});
+
 test("malformed generated claim fields fail validation", async () => {
   process.env.OPENAI_API_KEY = "test-openai-key";
   useOpenAIFake({ claimant: "Invented", amount: 4000 });

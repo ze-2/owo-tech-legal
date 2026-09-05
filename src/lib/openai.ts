@@ -246,12 +246,20 @@ const textField = (max: number) =>
 		.transform((value) => (Array.isArray(value) ? value.join(" ") : value))
 		.pipe(z.string().max(max));
 
+// OpenAI-compatible providers may emit a schema-declared monetary string as
+// a JSON number. Preserve its digits while keeping all other text fields
+// strict; downstream claim validation still checks the monetary format.
+const amountField = z
+	.union([z.string(), z.number().finite()])
+	.transform((value) => (typeof value === "number" ? String(value) : value))
+	.pipe(z.string().max(40));
+
 const extractionSchema = z.object({
 	claimant: textField(2000),
 	respondent: textField(2000),
 	claimType: z.enum(claimTypes),
 	incidentDate: textField(30),
-	amount: textField(40),
+	amount: amountField,
 	summary: textField(30000),
 	timeline: textField(12000),
 	outcome: textField(5000),
