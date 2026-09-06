@@ -57,6 +57,7 @@ import {
 } from "@/lib/workspace-draft";
 import { ConversationIntake } from "./conversation-intake";
 import { ClaimReview } from "./claim-review";
+import { CourtCheatsheet } from "./court-cheatsheet";
 import {
   Field,
   ResearchCard,
@@ -1622,6 +1623,16 @@ export function ClaimWorkspace({
                         : "This app does not submit or pay on your behalf."}
                     </p>
                   </section>
+                  {problem.trim() === SAMPLE_CLAIMS[0].problem &&
+                    outcome.trim() === SAMPLE_CLAIMS[0].outcome &&
+                    statements.length === 0 &&
+                    draft.claimant === "Alex Tan" &&
+                    draft.respondent === "Music Elements" &&
+                    draft.amount === "800" &&
+                    draft.incidentDate === "2026-09-04" &&
+                    draft.claimType === "Sale of goods" && (
+                      <CourtCheatsheet draft={draft} evidence={evidence} onDownload={saveFile} />
+                    )}
                   <div className="form-actions">
                     <button
                       className="button secondary"
