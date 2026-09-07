@@ -12,7 +12,8 @@
     "test:e2e": "playwright test",
     "test:live": "tsx tests/live-smoke.mts",
     "test:cjts:live": "tsx tests/live-cjts.mts",
-    "record:userflow": "tsx scripts/record-user-flow.mts"
+    "record:userflow": "tsx scripts/record-user-flow.mts",
+    "bot:telegram": "tsx scripts/telegram-bot.mts"
   },
   "dependencies": {
     "lucide-react": "^0.577.0",

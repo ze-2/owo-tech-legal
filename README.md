@@ -106,7 +106,7 @@ The four workspace steps are:
 
 | Step | Data and behavior |
 | --- | --- |
-| Tell your story | Long-form account, short conversational messages, voice transcript review, document import, and evidence attachment. |
+| Tell your story | One account field for typing and voice, follow-up questions, document import, and evidence attachment. |
 | Organise your claim | Editable parties, category, amount, date, chronology, requested outcome, and the other party’s position. |
 | Review the guidance | Reference or retrieved guidance covering parties, eligibility, facts and evidence, outcomes, and filing/service. |
 | Prepare to file | Assertion checks, evidence links, per-field approval, preparation-draft download, JSON export, and the CJTS portal link. |
@@ -133,7 +133,9 @@ The four workspace steps are:
 
 Evidence limits are 10 files, 10 MB per file, and 25 MB combined. Extracted text is bounded at 30,000 characters. The original files remain separate from the exported preparation draft and transfer JSON.
 
-[`conversation-intake.tsx`](src/components/conversation-intake.tsx) uses [`speech.ts`](src/lib/speech.ts) for recording, language hints, cancellation, and transcription. The recording lifecycle releases microphone tracks before awaiting a transcript. The returned text stays editable before it is added to the account. A recording is limited to 60 seconds and 10 MB.
+[`voice-fields.tsx`](src/components/voice-fields.tsx) adds an embedded mic button to every text input and textarea, using [`speech.ts`](src/lib/speech.ts) for OpenRouter Whisper recording, cancellation, and transcription. Voice settings share explicit audio consent and the chosen language across the tab; automatic language detection is the default. Transcripts are added directly to the field and remain editable. Recording is limited to 60 seconds and 10 MB. Exceeding a field’s character limit preserves its existing text and displays the transcript for manual editing. The account has one shared typing/dictation surface, with questions and review snapshots below it.
+
+[`dropdown.tsx`](src/components/dropdown.tsx) supplies custom dropdowns for claim choices and speech language, with keyboard navigation, typeahead, Escape dismissal, and accessible option labels. Research cards and filing-pack exports use numbered field-level footnotes with relevant excerpts selected from retrieved source text; excerpts are never supplied by the model.
 
 ## Server APIs and provider integration
 
@@ -335,3 +337,7 @@ npm start
 ```
 
 For framework changes, read [`AGENTS.md`](AGENTS.md) and the relevant installed Next.js guide under `node_modules/next/dist/docs/` before editing application code.
+
+## Telegram bot
+
+Send text or voice notes, answer AI follow-up questions, research official sources with footnotes, and approve a JSON package for the existing Chrome extension. Run `npm run bot:telegram` after configuring the bot token and provider keys. See [Telegram setup and user flow](TELEGRAM.md).

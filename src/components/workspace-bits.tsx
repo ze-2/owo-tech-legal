@@ -1,6 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useId, cloneElement, isValidElement, type ReactNode, type ReactElement } from "react";
+import { sectionFootnotes } from "@/lib/research-footnotes";
 import {
   ArrowUpRight,
   BookOpen,
@@ -59,17 +60,26 @@ export function Field({
   hint?: string;
   children: ReactNode;
 }) {
+  const id = useId();
+  const control = isValidElement(children) ? children as ReactElement<{ id?: string }> : null;
+  const fieldId = control?.props.id || id;
   return (
-    <label className="field">
-      <span className="field-label">{label}</span>
+    <div className="field">
+      <label className="field-label" htmlFor={fieldId}>{label}</label>
       {hint && <span className="field-hint">{hint}</span>}
-      {children}
-    </label>
+      {control ? cloneElement(control, { id: fieldId }) : children}
+    </div>
   );
 }
 
 export function ResearchCard({ section }: { section: ResearchSection }) {
-  const guidanceSources = section.fieldSources.guidance ?? section.sources;
+  const { notes, markers } = sectionFootnotes(section);
+  const prefix = useId();
+  const footnotes = (field: string) => markers[field].map(number => (
+    <sup key={number} className="research-footnote-marker">
+      <a href={`#${prefix}-source-${number}`} aria-label={`Source ${number} for ${field}`}>[{number}]</a>
+    </sup>
+  ));
   return (
     <section className="form-card research-card">
       <div className="research-heading">
@@ -86,32 +96,23 @@ export function ResearchCard({ section }: { section: ResearchSection }) {
           {section.error} Showing reference guidance.
         </p>
       )}
-      <p className="research-guidance">{section.guidance}</p>
+      <p className="research-guidance">{section.guidance}{footnotes("guidance")}</p>
       <div className="research-detail">
         <span>Also consider</span>
-        <p>{section.counterpoint}</p>
-        {section.fieldSources.counterpoint?.map((source) => (
-          <SourceLink key={source.url} href={source.url}>
-            {source.title}
-          </SourceLink>
-        ))}
+        <p>{section.counterpoint}{footnotes("counterpoint")}</p>
       </div>
       <div className="research-detail">
         <span>Still to verify</span>
-        <p>{section.missingInfo}</p>
-        {section.fieldSources.missingInfo?.map((source) => (
-          <SourceLink key={source.url} href={source.url}>
-            {source.title}
-          </SourceLink>
-        ))}
+        <p>{section.missingInfo}{footnotes("missingInfo")}</p>
       </div>
-      <div className="research-sources">
-        {guidanceSources.map((source) => (
-          <SourceLink key={source.url} href={source.url}>
-            {source.title}
-          </SourceLink>
+      <ol className="research-footnotes" aria-label="Source footnotes">
+        {notes.map((source, index) => (
+          <li key={`${source.url}-${index}`} id={`${prefix}-source-${index + 1}`}>
+            <SourceLink href={source.url}>{source.title}</SourceLink>
+            {source.snippet && <><small>Retrieved source excerpt</small><blockquote>{source.snippet}</blockquote></>}
+          </li>
         ))}
-      </div>
+      </ol>
       <details className="search-query">
         <summary>
           View research query <ChevronDown size={12} />

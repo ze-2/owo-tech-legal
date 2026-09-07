@@ -403,3 +403,58 @@ test("an already-aborted request does not reach the provider", async () => {
   );
   assert.equal(called, false);
 });
+
+test("Gemini INVALID_ARGUMENT retries without response_format and retains the schema contract", async () => {
+  const calls: Array<{ response_format?: unknown; messages: Array<{ role: string; content: string }> }> = [];
+  __setOpenAIClient({ chat: { completions: { create: async (params) => {
+    calls.push(params as typeof calls[number]);
+    if (calls.length === 1) throw {
+      status: 400, message: "400 Provider returned error",
+      error: { metadata: { raw: '{"error":{"message":"Request contains an invalid argument.","status":"INVALID_ARGUMENT"}}' } },
+    };
+    return { choices: [{ message: { content: JSON.stringify({ draft, observations: [] }) } }] };
+  } } } });
+  const result = await organiseConversationWithOpenAI(intake.problem, intake.outcome, []);
+  assert.equal(result.draft.claimant, "Alex Tan");
+  assert.equal(calls.length, 2);
+  assert.ok(calls[0].response_format);
+  assert.equal(calls[1].response_format, undefined);
+  const system = calls[1].messages.find(message => message.role === "system")!.content;
+  assert.ok(system.includes('"observations"'));
+  assert.ok(system.includes('"claimType"'));
+  for (const type of claimTypes) assert.ok(system.includes(type));
+});
+
+test("structured-output compatibility retries stay bounded and hide provider details", async () => {
+  let calls = 0;
+  __setOpenAIClient({ chat: { completions: { create: async () => {
+    calls++;
+    throw { status: 400, message: "Invalid argument: sensitive provider detail" };
+  } } } });
+  await assert.rejects(() => organiseWithOpenAI(intake), error => {
+    assert.ok(error instanceof Error);
+    assert.doesNotMatch(error.message, /sensitive provider detail/);
+    return true;
+  });
+  assert.equal(calls, 2);
+});
+
+test("unrelated bad requests do not trigger a schema compatibility retry", async () => {
+  let calls = 0;
+  __setOpenAIClient({ chat: { completions: { create: async () => {
+    calls++; throw { status: 400, message: "Maximum context length exceeded" };
+  } } } });
+  await assert.rejects(() => organiseWithOpenAI(intake));
+  assert.equal(calls, 1);
+});
+
+test("fallback responses still pass the same validation", async () => {
+  let calls = 0;
+  __setOpenAIClient({ chat: { completions: { create: async () => {
+    calls++;
+    if (calls % 2) throw { status: 400, param: "response_format", message: "Unsupported response_format" };
+    return { choices: [{ message: { content: JSON.stringify({ claimant: "Invented" }) } }] };
+  } } } });
+  await assert.rejects(() => organiseWithOpenAI(intake), /did not pass validation/);
+  assert.equal(calls, 4, "each of the two validated attempts can negotiate the format once");
+});

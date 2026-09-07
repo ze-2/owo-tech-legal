@@ -96,7 +96,7 @@ export const draftSchema = z.object({
   caseNumber: z.string().max(100),
 });
 export type Draft = z.infer<typeof draftSchema>;
-export type Citation = { title: string; url: string };
+export type Citation = { title: string; url: string; snippet?: string };
 export type ResearchSection = {
   id: string;
   title: string;

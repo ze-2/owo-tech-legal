@@ -254,3 +254,14 @@ test("API rejects invalid JSON, cross-origin calls, and oversized bodies", async
   );
   assert.equal(sameOrigin.status, 200);
 });
+
+test("citation excerpts and titles come from Exa retrieval rather than model claims", async () => {
+  process.env.EXA_API_KEY = "test-exa-key";
+  process.env.OPENAI_API_KEY = "test-openai-key";
+  useOpenAIFake(generation());
+  mock.method(globalThis, "fetch", async () => Response.json({ results: [{ url: sources.filing.url, title: "Retrieved title", text: "Review the official requirements. Check the exclusions. Confirm the supporting documents." }] }));
+  const section = await researchSection("claim", draft, []);
+  assert.equal(section.fieldSources.guidance[0].title, "Retrieved title");
+  assert.equal(section.fieldSources.guidance[0].snippet, "Review the official requirements.");
+  assert.equal(section.fieldSources.counterpoint[0].snippet, "Check the exclusions.");
+});

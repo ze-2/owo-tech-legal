@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { relevantSnippet } from "./research-footnotes";
 import {
   type Citation,
   type Draft,
@@ -160,10 +161,15 @@ export async function researchSection(
       .filter(
         (item) => isOfficialSource(item.url) && retrievedUrls.has(item.url),
       )
-      .map((item) => ({
-        title: item.title ?? "Singapore Judiciary",
-        url: item.url,
-      }));
+      .map((item) => {
+        const retrieved = results.find(source => source.url === item.url)!;
+        const snippet = relevantSnippet(retrieved, generated[key]);
+        return {
+          title: retrieved.title || "Singapore Judiciary",
+          url: item.url,
+          ...(snippet ? { snippet } : {}),
+        };
+      });
     if (citations.length) fieldSources[key] = citations;
   }
   if (!fieldSources.guidance?.length)

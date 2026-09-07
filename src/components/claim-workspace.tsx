@@ -1,4 +1,6 @@
 "use client";
+import { Dropdown } from "./dropdown";
+import { VoiceInput, VoiceTextarea } from "./voice-fields";
 
 import {
   Fragment,
@@ -55,7 +57,7 @@ import {
   mergeConversationDraft,
   mergePreparedDraft,
 } from "@/lib/workspace-draft";
-import { ConversationIntake } from "./conversation-intake";
+import { ConversationRecord } from "./conversation-intake";
 import { ClaimReview } from "./claim-review";
 import { CourtCheatsheet } from "./court-cheatsheet";
 import {
@@ -97,6 +99,7 @@ export function ClaimWorkspace({
   const [assertions, setAssertions] = useState<Assertion[]>([]);
   const [mode, setMode] = useState<"new" | "existing">("new");
   const [problem, setProblem] = useState("");
+  const [accountInput, setAccountInput] = useState<{ language: string; input: Statement["input"] }>({ language: "auto", input: "typed" });
   const [outcome, setOutcome] = useState("");
   const [evidence, setEvidence] = useState<Evidence[]>([]);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -145,7 +148,12 @@ export function ClaimWorkspace({
     setError("");
     setNotice("");
     window.scrollTo({ top: 0, behavior: "smooth" });
-    setTimeout(() => summaryRef.current?.focus(), 50);
+    const previousFocus = document.activeElement;
+    setTimeout(() => {
+      // Do not steal focus if the user has already begun editing the new step.
+      if (document.activeElement === previousFocus || document.activeElement === document.body)
+        summaryRef.current?.focus();
+    }, 50);
   }
 
   function resetApprovals() {
@@ -194,12 +202,10 @@ export function ClaimWorkspace({
     }
   }
 
-  async function addMessage(
-    messageText: string,
-    language: string,
-    input: Statement["input"],
-  ): Promise<boolean> {
-    const original = [problem, messageText].filter(Boolean).join("\n");
+  async function organiseAccount(): Promise<boolean> {
+    const original = problem.trim();
+    if (!original) return false;
+    const { language, input } = accountInput;
     if (original.length > MAX_ACCOUNT_CHARS) {
       setError("The combined account must be 30,000 characters or fewer.");
       return false;
@@ -209,7 +215,7 @@ export function ClaimWorkspace({
       ...current,
       {
         id: crypto.randomUUID(),
-        text: messageText,
+        text: original,
         language,
         input,
         createdAt: new Date().toISOString(),
@@ -511,11 +517,10 @@ export function ClaimWorkspace({
 
   const conversationIntake = (
     <Fragment key="conversation-intake">
-      <ConversationIntake
+      <ConversationRecord
         statements={statements}
         observations={observations}
         prompt={conversationPrompt}
-        onSend={addMessage}
       />
       {draft && !accountChanged && (
         <section className="form-card conversation">
@@ -740,7 +745,6 @@ export function ClaimWorkspace({
                     </button>
                   </div>
 
-                  {mode === "new" && conversationIntake}
                   <form
                     onSubmit={(event) => {
                       event.preventDefault();
@@ -797,8 +801,9 @@ export function ClaimWorkspace({
                           ? "What’s the problem?"
                           : "Existing claim text"}
                       </label>
-                      <textarea
+                      <VoiceTextarea
                         id="problem"
+                        onTranscribed={(language) => setAccountInput({ language, input: "voice" })}
                         className="story-textarea"
                         placeholder={
                           mode === "new"
@@ -806,8 +811,9 @@ export function ClaimWorkspace({
                             : "Paste your claim, case summary, or relevant correspondence here…"
                         }
                         value={problem}
-                        onChange={(event) => {
-                          setProblem(event.target.value);
+                        onValueChange={(value) => {
+                          setProblem(value);
+                          setAccountInput({ language: "auto", input: "typed" });
                           invalidate(true);
                         }}
                         maxLength={30000}
@@ -820,6 +826,9 @@ export function ClaimWorkspace({
                         </span>
                         <span>{problem.length.toLocaleString()} / 30,000</span>
                       </div>
+                      <button type="button" className="button secondary" disabled={Boolean(busy) || !problem.trim()}
+                        onClick={() => void organiseAccount()}>Review account and ask next question</button>
+                      {conversationIntake}
                       <div className="example-line">
                         <Sparkles size={13} />
                         <span>Try a fictional example:</span>
@@ -949,17 +958,17 @@ export function ClaimWorkspace({
                               >
                                 What {item.name} shows
                               </label>
-                              <input
+                              <VoiceInput
                                 id={`note-${item.id}`}
                                 value={item.note}
                                 maxLength={2000}
                                 disabled={Boolean(busy)}
                                 placeholder="What does this show? Connect it to a date, event or amount."
-                                onChange={(event) => {
+                                onValueChange={(value) => {
                                   setEvidence((current) =>
                                     current.map((file) =>
                                       file.id === item.id
-                                        ? { ...file, note: event.target.value }
+                                        ? { ...file, note: value }
                                         : file,
                                     ),
                                   );
@@ -1004,16 +1013,16 @@ export function ClaimWorkspace({
                       <label className="sr-only" htmlFor="outcome">
                         What outcome would help?
                       </label>
-                      <textarea
+                      <VoiceTextarea
                         id="outcome"
                         className="outcome-textarea"
                         placeholder="For example, a refund of S$2,400, the work completed, or a replacement for the faulty item…"
                         value={outcome}
                         maxLength={5000}
                         disabled={Boolean(busy)}
-                        onChange={(event) => {
-                          setOutcome(event.target.value);
-                          if (draft) updateDraft("outcome", event.target.value);
+                        onValueChange={(value) => {
+                          setOutcome(value);
+                          if (draft) updateDraft("outcome", value);
                           invalidate(true);
                         }}
                       />
@@ -1090,7 +1099,6 @@ export function ClaimWorkspace({
                       </button>
                     )}
                   </form>
-                  {mode === "existing" && conversationIntake}
                 </>
               )}
 
@@ -1134,49 +1142,32 @@ export function ClaimWorkspace({
                     </div>
                     <div className="field-grid">
                       <Field label="Your details (claimant)">
-                        <textarea
+                        <VoiceTextarea
                           value={draft.claimant}
                           maxLength={2000}
                           placeholder="Name, contact details and address"
-                          onChange={(e) =>
-                            updateDraft("claimant", e.target.value)
+                          onValueChange={(value) =>
+                            updateDraft("claimant", value)
                           }
                         />
                       </Field>
                       <Field label="The other party (respondent)">
-                        <textarea
+                        <VoiceTextarea
                           value={draft.respondent}
                           maxLength={2000}
                           placeholder="Legal name and address for service"
-                          onChange={(e) =>
-                            updateDraft("respondent", e.target.value)
+                          onValueChange={(value) =>
+                            updateDraft("respondent", value)
                           }
                         />
                       </Field>
                       <Field label="You are claiming as">
-                        <select
-                          value={draft.claimantType}
-                          onChange={(e) =>
-                            updateDraft("claimantType", e.target.value)
-                          }
-                        >
-                          <option value="individual">An individual</option>
-                          <option value="entity">
-                            A business or other entity
-                          </option>
-                        </select>
+                        <Dropdown value={draft.claimantType} onValueChange={value => updateDraft("claimantType", value)}
+                          options={[{ value: "individual", label: "An individual" }, { value: "entity", label: "A business or other entity" }]} />
                       </Field>
                       <Field label="Can the respondent be served in Singapore?">
-                        <select
-                          value={draft.respondentInSingapore}
-                          onChange={(e) =>
-                            updateDraft("respondentInSingapore", e.target.value)
-                          }
-                        >
-                          <option value="unknown">I need to confirm</option>
-                          <option value="yes">Yes</option>
-                          <option value="no">No</option>
-                        </select>
+                        <Dropdown value={draft.respondentInSingapore} onValueChange={value => updateDraft("respondentInSingapore", value)}
+                          options={[{ value: "unknown", label: "I need to confirm" }, { value: "yes", label: "Yes" }, { value: "no", label: "No" }]} />
                       </Field>
                     </div>
                   </section>
@@ -1192,28 +1183,20 @@ export function ClaimWorkspace({
                     </div>
                     <div className="field-grid">
                       <Field label="Type of claim">
-                        <select
-                          value={draft.claimType}
-                          onChange={(e) =>
-                            updateDraft("claimType", e.target.value)
-                          }
-                        >
-                          {claimTypes.map((type) => (
-                            <option key={type}>{type}</option>
-                          ))}
-                        </select>
+                        <Dropdown value={draft.claimType} onValueChange={value => updateDraft("claimType", value)}
+                          options={claimTypes.map(type => ({ value: type, label: type }))} />
                       </Field>
                       <Field
                         label="Total claim value (S$)"
                         hint="Include the value of non-monetary relief."
                       >
-                        <input
+                        <VoiceInput
                           inputMode="decimal"
                           value={draft.amount}
                           maxLength={40}
                           placeholder="e.g. 2400"
-                          onChange={(e) =>
-                            updateDraft("amount", e.target.value)
+                          onValueChange={(value) =>
+                            updateDraft("amount", value)
                           }
                         />
                       </Field>
@@ -1221,11 +1204,11 @@ export function ClaimWorkspace({
                         label="Cause-of-action date"
                         hint="When the event creating the claim happened."
                       >
-                        <input
+                        <VoiceInput
                           type="date"
                           value={draft.incidentDate}
-                          onChange={(e) =>
-                            updateDraft("incidentDate", e.target.value)
+                          onValueChange={(value) =>
+                            updateDraft("incidentDate", value)
                           }
                         />
                       </Field>
@@ -1233,12 +1216,12 @@ export function ClaimWorkspace({
                         label="Existing case reference"
                         hint="If already filed. Otherwise leave blank."
                       >
-                        <input
+                        <VoiceInput
                           value={draft.caseNumber}
                           maxLength={100}
                           placeholder="Your CJTS case reference"
-                          onChange={(e) =>
-                            updateDraft("caseNumber", e.target.value)
+                          onValueChange={(value) =>
+                            updateDraft("caseNumber", value)
                           }
                         />
                       </Field>
@@ -1257,23 +1240,23 @@ export function ClaimWorkspace({
                       </span>
                     </label>
                     <Field label="Summary of what happened">
-                      <textarea
+                      <VoiceTextarea
                         className="long-textarea"
                         value={draft.summary}
                         maxLength={30000}
-                        onChange={(e) => updateDraft("summary", e.target.value)}
+                        onValueChange={(value) => updateDraft("summary", value)}
                       />
                     </Field>
                     <Field
                       label="Timeline"
                       hint="One event per line. Link events to evidence references such as E1."
                     >
-                      <textarea
+                      <VoiceTextarea
                         value={draft.timeline}
                         maxLength={12000}
                         placeholder="Date — event — supporting evidence"
-                        onChange={(e) =>
-                          updateDraft("timeline", e.target.value)
+                        onValueChange={(value) =>
+                          updateDraft("timeline", value)
                         }
                       />
                     </Field>
@@ -1296,22 +1279,22 @@ export function ClaimWorkspace({
                       </div>
                     </div>
                     <Field label="What you are asking for">
-                      <textarea
+                      <VoiceTextarea
                         value={draft.outcome}
                         maxLength={5000}
-                        onChange={(e) => updateDraft("outcome", e.target.value)}
+                        onValueChange={(value) => updateDraft("outcome", value)}
                       />
                     </Field>
                     <Field
                       label="What has the other party said?"
                       hint="Include any disagreement, explanation, or settlement offer. If you don’t know, say so."
                     >
-                      <textarea
+                      <VoiceTextarea
                         value={draft.opposingView}
                         maxLength={5000}
                         placeholder="They may see things differently. Record their actual response here."
-                        onChange={(e) =>
-                          updateDraft("opposingView", e.target.value)
+                        onValueChange={(value) =>
+                          updateDraft("opposingView", value)
                         }
                       />
                     </Field>
@@ -1554,12 +1537,12 @@ export function ClaimWorkspace({
                       label="Pre-filing assessment ID"
                       hint="Enter the ID supplied by CJTS, if you have completed the assessment."
                     >
-                      <input
+                      <VoiceInput
                         value={draft.assessmentId}
                         maxLength={100}
                         placeholder="Enter your assessment ID"
-                        onChange={(e) =>
-                          updateDraft("assessmentId", e.target.value)
+                        onValueChange={(value) =>
+                          updateDraft("assessmentId", value)
                         }
                       />
                     </Field>

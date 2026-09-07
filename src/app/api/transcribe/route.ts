@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { transcribeRecording } from "@/lib/transcription";
 import {
   checkOrigin,
   errorResponse,
@@ -26,8 +26,6 @@ const AUDIO_FORMATS: Record<string, string> = {
 
 // Multipart overhead above the raw audio limit.
 const FORM_OVERHEAD_BYTES = 64 * 1024;
-const PROVIDER_TIMEOUT_MS = 55_000;
-const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
 export async function POST(request: Request) {
   try {
@@ -47,39 +45,9 @@ export async function POST(request: Request) {
     const format = AUDIO_FORMATS[mime];
     if (!format) throw new RequestError("audio-format-not-supported", 415);
     const language = parseLanguageHint(form.get("language"));
-    const client = new OpenAI({
-      apiKey: key,
-      baseURL: OPENROUTER_BASE_URL,
-      maxRetries: 0,
-    });
-
-    return await withCapacity(async () => {
-      let text: unknown;
-      try {
-        const result = await client.audio.transcriptions.create(
-          {
-            file: new File([audio], `recording.${format}`, {
-              type: audio.type,
-            }),
-            model:
-              process.env.OPENROUTER_TRANSCRIPTION_MODEL ||
-              "openai/whisper-large-v3",
-            ...(language ? { language } : {}),
-          },
-          { signal: request.signal, timeout: PROVIDER_TIMEOUT_MS },
-        );
-        text = (result as { text?: unknown })?.text;
-      } catch (error) {
-        if (error instanceof RequestError) throw error;
-        const status = (error as { status?: unknown })?.status;
-        if (status === 429) throw new RequestError("rate-limited", 429);
-        throw new RequestError("network", 502);
-      }
-      if (typeof text !== "string") {
-        throw new RequestError("network", 502);
-      }
-      return json({ text });
-    });
+    return await withCapacity(async () => json({
+      text: await transcribeRecording(audio, format, language, request.signal),
+    }));
   } catch (error) {
     return errorResponse(error);
   }

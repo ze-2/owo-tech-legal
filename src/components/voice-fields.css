@@ -1,0 +1,18 @@
+.voice-field { min-width: 0; width: 100%; }
+.voice-field-control { position: relative; }
+.voice-field-control > input, .voice-field-control > textarea { width: 100%; padding-right: 3.25rem; box-sizing: border-box; }
+.voice-mic { position: absolute; right: .5rem; top: .5rem; display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border: 1px solid #d0ddd5; border-radius: .6rem; background: #f0f5f1; color: #28533b; cursor: pointer; }
+.voice-mic.active { background: #28533b; color: white; }
+.voice-mic:disabled { opacity: .45; cursor: not-allowed; }
+.voice-mic:focus-visible { outline: 2px solid #28533b; outline-offset: 2px; }
+.voice-settings-toggle { display: block; margin: .35rem 0; padding: .15rem 0; border: 0; background: transparent; color: #526b5b; font: inherit; font-size: .75rem; cursor: pointer; text-decoration: underline; }
+.voice-settings { display: grid; gap: .6rem; padding: .8rem; margin: .5rem 0; border: 1px solid #d0ddd5; border-radius: .6rem; background: #f8faf8; font-size: .85rem; }
+.voice-settings .check-label { margin: 0; }
+.voice-settings small { line-height: 1.5; }
+.voice-status { font-size: .8rem; line-height: 1.5; overflow-wrap: anywhere; margin: .4rem 0; }
+.research-footnotes { padding-left: 1.4rem; font-size: .85rem; }
+.research-footnotes li { margin: .75rem 0; scroll-margin-top: 5rem; }
+.research-footnotes blockquote { margin: .5rem 0; padding-left: .75rem; border-left: 2px solid #a7bab0; white-space: pre-wrap; }
+.research-footnote-marker { margin-left: .3rem; }
+
+.voice-settings .check-label input { width: auto; padding: 0; flex-shrink: 0; }

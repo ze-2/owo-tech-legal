@@ -1,3 +1,4 @@
+import { VoiceFieldsProvider } from "@/components/voice-fields";
 import type { Metadata } from "next";
 // Keep global imports ordered: shared defaults precede feature styles.
 import "./styles/tokens.css";
@@ -8,6 +9,8 @@ import "@/components/claim-workspace.css";
 import "@/components/conversation-intake.css";
 import "@/components/claim-review.css";
 import "@/components/research.css";
+import "@/components/voice-fields.css";
+import "@/components/dropdown.css";
 
 export const metadata: Metadata = {
   title: "Clearclaim — Make your next step clear",
@@ -21,7 +24,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en-SG">
-      <body>{children}</body>
+      <body><VoiceFieldsProvider>{children}</VoiceFieldsProvider></body>
     </html>
   );
 }

@@ -5,6 +5,7 @@ import {
   type Evidence,
   type Research,
 } from "./claim";
+import { sectionFootnotes } from "./research-footnotes";
 import { sources, SOURCE_REVIEW_DATE } from "./sources";
 
 const NOT_PROVIDED = "[Not provided — verify before filing]";
@@ -42,10 +43,12 @@ function researchSection(research: Research | null): string {
   if (!research)
     return "## Research notes\n\nLive research has not been performed.";
   const blocks = research.sections.map((section) => {
-    const sourceLines = section.sources
-      .map((source) => `- ${source.title}: ${source.url}`)
-      .join("\n");
-    return `### ${section.title} [${section.status}]\n\n${section.guidance}\n\nConsider: ${section.counterpoint}\n\nVerify: ${section.missingInfo}\n\n${sourceLines}`;
+    const { notes, markers } = sectionFootnotes(section);
+    const refs = (key: string) => markers[key].map(n => `[${n}]`).join("");
+    const sourceLines = notes.map((source, i) =>
+      `[${i + 1}] ${source.title}: ${source.url}${source.snippet ? `\n   Retrieved excerpt: ${source.snippet}` : ""}`,
+    ).join("\n");
+    return `### ${section.title} [${section.status}]\n\n${section.guidance} ${refs("guidance")}\n\nConsider: ${section.counterpoint} ${refs("counterpoint")}\n\nVerify: ${section.missingInfo} ${refs("missingInfo")}\n\n${sourceLines}`;
   });
   return `## Research notes\n\n${blocks.join("\n\n")}`;
 }

@@ -45,9 +45,8 @@ test("new claim can be reviewed, researched in reference mode, and exported", as
   await page
     .getByLabel("What has the other party said?")
     .fill("They have not answered my calls or returned the deposit.");
-  await page
-    .getByLabel("Can the respondent be served in Singapore?")
-    .selectOption("yes");
+  await page.getByLabel("Can the respondent be served in Singapore?").click();
+  await page.getByRole("option", { name: "Yes", exact: true }).click();
   await page.getByRole("button", { name: "Review official guidance" }).click();
   await expect(
     page.getByText("Reference guidance · no live research has been performed"),
@@ -87,7 +86,7 @@ test("starting point switches the first panel and preserves entered text", async
   const existing = page.getByRole("button", { name: "I have an existing claim" });
   const newClaim = page.getByRole("button", { name: "Start a new claim" });
   const message = "I want to keep this unsent message.";
-  await page.getByLabel("Your next message").fill(message);
+  await page.getByLabel("What’s the problem?", { exact: true }).fill(message);
   await existing.click();
   await expect(existing).toHaveAttribute("aria-pressed", "true");
   await expect(newClaim).toHaveAttribute("aria-pressed", "false");
@@ -99,9 +98,9 @@ test("starting point switches the first panel and preserves entered text", async
   await expect(newClaim).toHaveAttribute("aria-pressed", "true");
   await expect(existing).toHaveAttribute("aria-pressed", "false");
   await expect(
-    page.getByRole("heading", { name: "Talk through your claim" }),
+    page.getByRole("heading", { name: "What’s the problem?" }),
   ).toBeInViewport();
-  await expect(page.getByLabel("Your next message")).toHaveValue(message);
+  await expect(page.getByRole("heading", { name: "Talk through your claim" })).toHaveCount(0);
   await expect(page.getByLabel("What’s the problem?", { exact: true })).toHaveValue(
     "My existing claim details.",
   );

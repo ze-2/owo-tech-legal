@@ -1,24 +1,26 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { assistForm } from "../../cjts-prefiling/form-assist.mjs";
 import { parsePackage } from "../../cjts-prefiling/transfer.mjs";
+
+const voice = (page: Page) => page.locator(".voice-field").filter({ has: page.locator("#problem") });
 
 test("conversation → challenge → field approval → export → assisted mock form transfer", async ({
   page,
 }) => {
   await page.goto("/");
   const original = "我给装修公司三千块订金，他们说三月开始可是一直没有来。";
-  await page.getByLabel("Your next message").fill(original);
-  await page.getByRole("button", { name: "Add to conversation" }).click();
+  await page.getByLabel("What’s the problem?", { exact: true }).fill(original);
+  await page.getByRole("button", { name: "Review account and ask next question" }).click();
   await expect(
     page.getByText("Working interpretation: Unknown — exact value unresolved"),
   ).toBeVisible();
   await page
-    .getByLabel("Your next message")
+    .getByLabel("What’s the problem?", { exact: true })
     .fill(
-      "Claimant: Mei Lim\nRespondent: Example Renovation\nClaim amount: 3000\nThe contractor refused to refund me.",
+      `${original}\nClaimant: Mei Lim\nRespondent: Example Renovation\nClaim amount: 3000\nThe contractor refused to refund me.`,
     );
-  await page.getByRole("button", { name: "Add to conversation" }).click();
+  await page.getByRole("button", { name: "Review account and ask next question" }).click();
   await expect(
     page.getByRole("button", { name: "Review organised conversation" }),
   ).toBeEnabled();
@@ -59,6 +61,7 @@ test("conversation → challenge → field approval → export → assisted mock
     "Requested outcome",
   ])
     await page.getByLabel(`Approve ${name}`, { exact: true }).check();
+  await page.getByLabel("Approve CJTS subtype Renovation Services", { exact: true }).check();
   const downloaded = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Export approved filing JSON" })
@@ -138,22 +141,23 @@ test("microphone permission failure preserves typed input and permits continuing
   });
   await page.goto("/");
   await page
-    .getByLabel("Your next message")
+    .getByLabel("What’s the problem?", { exact: true })
     .fill("My typed account remains here.");
+  await voice(page).getByRole("button", { name: "Voice settings" }).click();
   await page
     .getByLabel("I allow OpenRouter and its transcription provider")
     .check();
-  await page.getByRole("button", { name: "Start microphone" }).click();
+  await voice(page).getByRole("button", { name: "Start microphone" }).click();
   await expect(
     page
       .getByRole("status")
-      .filter({ hasText: "Microphone permission was denied" }),
+      .filter({ hasText: "Microphone permission" }),
   ).toBeVisible();
-  await expect(page.getByLabel("Your next message")).toHaveValue(
+  await expect(page.getByLabel("What’s the problem?", { exact: true })).toHaveValue(
     "My typed account remains here.",
   );
   await expect(
-    page.getByRole("button", { name: "Add to conversation" }),
+    page.getByRole("button", { name: "Review account and ask next question" }),
   ).toBeEnabled();
 });
 
@@ -214,24 +218,26 @@ test("microphone records multilingual audio and releases tracks before transcrip
     await route.fulfill({ json: { text: "我付了订金。" } });
   });
   await page.goto("/");
-  await page.getByLabel("Speech language").selectOption("zh-CN");
-  await page.getByLabel("Your next message").fill("Existing text.");
+  await page.getByLabel("What’s the problem?", { exact: true }).fill("Existing text.");
   await expect(
-    page.getByRole("button", { name: "Start microphone" }),
-  ).toBeDisabled();
+    voice(page).getByRole("button", { name: "Start microphone" }),
+  ).toBeEnabled();
+  await voice(page).getByRole("button", { name: "Voice settings" }).click();
   await page
     .getByLabel("I allow OpenRouter and its transcription provider")
     .check();
-  await page.getByRole("button", { name: "Start microphone" }).click();
+  await page.getByLabel("Speech language").click();
+  await page.getByRole("option", { name: "Mandarin Chinese" }).click();
+  await voice(page).getByRole("button", { name: "Start microphone" }).click();
   await expect(
     page.getByRole("status").filter({ hasText: "Listening." }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Stop microphone" }).click();
-  await expect(page.getByLabel("Your next message")).toHaveValue(
+  await voice(page).getByRole("button", { name: "Stop microphone" }).click();
+  await expect(page.getByLabel("What’s the problem?", { exact: true })).toHaveValue(
     "Existing text. 我付了订金。",
   );
   await expect(
-    page.getByRole("button", { name: "Add to conversation" }),
+    page.getByRole("button", { name: "Review account and ask next question" }),
   ).toBeEnabled();
   expect(
     await page.evaluate(() =>
@@ -254,10 +260,11 @@ test("missing browser recording support preserves the typed workflow", async ({
     Object.defineProperty(window, "MediaRecorder", { value: undefined });
   });
   await page.goto("/");
+  await voice(page).getByRole("button", { name: "Voice settings" }).click();
   await page
     .getByLabel("I allow OpenRouter and its transcription provider")
     .check();
-  await page.getByRole("button", { name: "Start microphone" }).click();
+  await voice(page).getByRole("button", { name: "Start microphone" }).click();
   await expect(
     page
       .getByRole("status")
@@ -266,8 +273,8 @@ test("missing browser recording support preserves the typed workflow", async ({
       }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Stop microphone" }),
-  ).toBeDisabled();
+    voice(page).getByRole("button", { name: "Start microphone" }),
+  ).toBeEnabled();
 });
 
 test("cancelling pending transcription discards the late transcript", async ({
@@ -284,28 +291,29 @@ test("cancelling pending transcription discards the late transcript", async ({
     await route.fulfill({ json: { text: "Late transcript" } }).catch(() => {});
   });
   await page.goto("/");
-  await page.getByLabel("Your next message").fill("Keep this.");
+  await page.getByLabel("What’s the problem?", { exact: true }).fill("Keep this.");
+  await voice(page).getByRole("button", { name: "Voice settings" }).click();
   await page
     .getByLabel("I allow OpenRouter and its transcription provider")
     .check();
-  await page.getByRole("button", { name: "Start microphone" }).click();
+  await voice(page).getByRole("button", { name: "Start microphone" }).click();
   await expect(
     page.getByRole("status").filter({ hasText: "Listening." }),
   ).toBeVisible();
   const request = page.waitForRequest("**/api/transcribe");
-  await page.getByRole("button", { name: "Stop microphone" }).click();
+  await voice(page).getByRole("button", { name: "Stop microphone" }).click();
   await request;
   await expect(
     page.getByRole("status").filter({ hasText: "Transcribing your recording" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Add to conversation" }),
-  ).toBeDisabled();
-  await page.getByRole("button", { name: "Stop microphone" }).click();
+    page.getByRole("button", { name: "Review account and ask next question" }),
+  ).toBeEnabled();
+  await voice(page).getByRole("button", { name: "Cancel recording" }).click();
   complete();
-  await expect(page.getByLabel("Your next message")).toHaveValue("Keep this.");
+  await expect(page.getByLabel("What’s the problem?", { exact: true })).toHaveValue("Keep this.");
   await expect(
-    page.getByRole("button", { name: "Start microphone" }),
+    voice(page).getByRole("button", { name: "Start microphone" }),
   ).toBeEnabled();
 });
 
@@ -335,16 +343,17 @@ test("cancelling a pending microphone request cannot start recognition later", a
     Object.defineProperty(window, "SpeechRecognition", { value: Recognition });
   });
   await page.goto("/");
+  await voice(page).getByRole("button", { name: "Voice settings" }).click();
   await page
     .getByLabel("I allow OpenRouter and its transcription provider")
     .check();
-  await page.getByRole("button", { name: "Start microphone" }).click();
+  await voice(page).getByRole("button", { name: "Start microphone" }).click();
   await expect(
     page
       .getByRole("status")
       .filter({ hasText: "Requesting microphone access" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Stop microphone" }).click();
+  await voice(page).getByRole("button", { name: "Cancel recording" }).click();
   await page.evaluate(() =>
     (
       window as unknown as { resolveMicrophone: () => void }
@@ -360,7 +369,7 @@ test("cancelling a pending microphone request cannot start recognition later", a
     )
     .toEqual(["probe-stopped"]);
   await expect(
-    page.getByRole("button", { name: "Start microphone" }),
+    voice(page).getByRole("button", { name: "Start microphone" }),
   ).toBeEnabled();
 });
 
